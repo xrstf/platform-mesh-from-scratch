@@ -5,6 +5,8 @@ Platform Mesh (PM). If you are looking to develop Platform Mesh or want a quick&
 local installation, use Platform Mesh's `local-setup` instead, but note that you should
 absolutely not use it as a starting point for production.
 
+This repository contains manifests for Platform Mesh version **0.5.2**.
+
 ## Overview
 
 This repository represents the absolute bare minimum that is required to get PM working.
