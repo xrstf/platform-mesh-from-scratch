@@ -24,9 +24,9 @@ spec:
     hostAliases:
       enabled: true
       entries:
-        - ip: 100.104.59.216
+        - ip: TRAEFIK_SERVICE_IP
           hostnames:
-            - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-            - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-            - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-            - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - PM_BASE_DOMAIN
+            - kcp.api.PM_BASE_DOMAIN
+            - root.kcp.PM_BASE_DOMAIN
+            - triton.kcp.PM_BASE_DOMAIN

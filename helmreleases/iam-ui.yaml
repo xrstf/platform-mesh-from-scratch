@@ -23,5 +23,5 @@ spec:
   values:
     exposure:
       hostnames:
-        - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-        - '*.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com'
+        - PM_BASE_DOMAIN
+        - '*.PM_BASE_DOMAIN'

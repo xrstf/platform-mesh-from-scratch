@@ -21,7 +21,7 @@ spec:
     remediation:
       retries: 3
   values:
-    baseDomain: pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443
+    baseDomain: PM_BASE_DOMAIN:8443
     caSecret: domain-certificate-ca
     idp:
       smtp:
@@ -29,19 +29,19 @@ spec:
         port: ""
         fromAddress: ""
       additionalRedirectUrls:
-        - https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/callback*
+        - https://PM_BASE_DOMAIN:8443/callback*
       registrationAllowed: true
       allowUnverifiedEmails: true
       setDefaultPassword: false
     keycloak:
-      baseUrl: https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/keycloak
+      baseUrl: https://PM_BASE_DOMAIN:8443/keycloak
     hostAliases:
       enabled: true
       entries:
-        - ip: 100.104.59.216
+        - ip: TRAEFIK_SERVICE_IP
           hostnames:
-            - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-            - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-            - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-            - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - PM_BASE_DOMAIN
+            - kcp.api.PM_BASE_DOMAIN
+            - root.kcp.PM_BASE_DOMAIN
+            - triton.kcp.PM_BASE_DOMAIN
     kubeconfigSecret: security-operator-kubeconfig

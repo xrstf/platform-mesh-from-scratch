@@ -6,11 +6,11 @@ metadata:
   namespace: platform-mesh-system
 spec:
   exposure:
-    baseDomain: pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-    kcpFrontProxyClusterIP: 100.111.17.126
+    baseDomain: PM_BASE_DOMAIN
+    kcpFrontProxyClusterIP: FRONT_PROXY_SERVICE_IP
     port: 8443
     protocol: https
-    traefikClusterIP: 100.104.59.216
+    traefikClusterIP: TRAEFIK_SERVICE_IP
   profileConfigMap:
     name: platform-mesh-profile
     namespace: platform-mesh-system
@@ -32,10 +32,10 @@ spec:
         values:
           kcp:
             external:
-              hostname: kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+              hostname: kcp.api.PM_BASE_DOMAIN
             rootShard:
-              hostname: root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-              shardBaseURL: https://root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/
+              hostname: root.kcp.PM_BASE_DOMAIN
+              shardBaseURL: https://root.kcp.PM_BASE_DOMAIN:8443/
             shards:
-              - hostname: triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+              - hostname: triton.kcp.PM_BASE_DOMAIN
                 name: triton

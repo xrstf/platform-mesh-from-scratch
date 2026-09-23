@@ -32,18 +32,18 @@ spec:
       enabled: true
       gatewayApi:
         hostnames:
-          - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-      issuer: https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/dex
+          - PM_BASE_DOMAIN
+      issuer: https://PM_BASE_DOMAIN:8443/dex
       staticClient:
         redirectURIs:
-          - https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/keycloak/realms/default/broker/dex/endpoint
+          - https://PM_BASE_DOMAIN:8443/keycloak/realms/default/broker/dex/endpoint
     gatewayApi:
       infrastructure:
         annotations:
           dns.gardener.cloud/class: garden
       listeners:
         - name: terminate
-          hostname: pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+          hostname: PM_BASE_DOMAIN
           port: 8443
           protocol: HTTPS
           tls:
@@ -53,7 +53,7 @@ spec:
                 name: domain-certificate
                 namespace: platform-mesh-system
         - name: terminate-wildstar
-          hostname: "*.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com"
+          hostname: "*.PM_BASE_DOMAIN"
           port: 8443
           protocol: HTTPS
           tls:
@@ -72,7 +72,7 @@ spec:
               from: All
       listenersExtra:
         - name: terminate-services
-          hostname: "*.services.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com"
+          hostname: "*.services.PM_BASE_DOMAIN"
           port: 8443
           protocol: HTTPS
           tls:
@@ -87,30 +87,30 @@ spec:
     hostAliases:
       enabled: true
       entries:
-        - ip: 100.104.59.216
+        - ip: TRAEFIK_SERVICE_IP
           hostnames:
-            - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-            - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-            - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-            - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - PM_BASE_DOMAIN
+            - kcp.api.PM_BASE_DOMAIN
+            - root.kcp.PM_BASE_DOMAIN
+            - triton.kcp.PM_BASE_DOMAIN
     kcp:
       external:
-        hostname: kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+        hostname: kcp.api.PM_BASE_DOMAIN
       frontProxy:
-        clusterIP: 100.111.17.126
+        clusterIP: FRONT_PROXY_SERVICE_IP
       rootShard:
-        hostname: root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-        shardBaseURL: https://root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/
+        hostname: root.kcp.PM_BASE_DOMAIN
+        shardBaseURL: https://root.kcp.PM_BASE_DOMAIN:8443/
       shards:
-        - hostname: triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+        - hostname: triton.kcp.PM_BASE_DOMAIN
           name: triton
     keycloak:
       gatewayApi:
         hostnames:
-          - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+          - PM_BASE_DOMAIN
       keycloakConfig:
         redirectUrls:
-          - https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/callback*
+          - https://PM_BASE_DOMAIN:8443/callback*
         # TODO: Default uses a URL without port and using "keycloak" as the service name, not
         # keycloak-service. We override that name further down in this file. Why? Could we not
         # use the default from the Helm chart in both places?
@@ -124,7 +124,7 @@ spec:
           username: keycloak-admin
           # password and secret are supplied by the pre-created keycloak-admin secret (see setup.sh)
         caSecret: domain-certificate-ca
-        hostname: https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/keycloak/
+        hostname: https://PM_BASE_DOMAIN:8443/keycloak/
       service:
         name: keycloak-service
         port: 8080
@@ -136,5 +136,5 @@ spec:
     #     - http://*.localhost:4200
     #     - http://*.localhost:4300
     #     - http://sub.localhost:4300
-    #     - https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443
-    #     - https://*.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443
+    #     - https://PM_BASE_DOMAIN:8443
+    #     - https://*.PM_BASE_DOMAIN:8443

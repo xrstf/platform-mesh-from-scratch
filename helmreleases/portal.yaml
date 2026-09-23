@@ -23,19 +23,19 @@ spec:
   values:
     auth:
       default:
-        baseDomain: pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+        baseDomain: PM_BASE_DOMAIN
         clientId: welcome
         clientSecretKey: attribute.client_secret
         clientSecretName: portal-client-secret-welcome
-        discoveryUrl: https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/keycloak/realms/${org-name}/.well-known/openid-configuration
-    cookieDomain: pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-    crdGatewayApiUrl: https://${org-subdomain}pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com/api/kubernetes-graphql-gateway/root:orgs:${org-name}/graphql
+        discoveryUrl: https://PM_BASE_DOMAIN:8443/keycloak/realms/${org-name}/.well-known/openid-configuration
+    cookieDomain: PM_BASE_DOMAIN
+    crdGatewayApiUrl: https://${org-subdomain}PM_BASE_DOMAIN/api/kubernetes-graphql-gateway/root:orgs:${org-name}/graphql
     environment: production
     extraEnvVars:
       - name: OPENMFP_PORTAL_CONTEXT_IAM_SERVICE_API_URL
-        value: https://${org-subdomain}pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/iam/graphql
+        value: https://${org-subdomain}PM_BASE_DOMAIN:8443/iam/graphql
       - name: OPENMFP_PORTAL_CONTEXT_CRD_GATEWAY_API_URL
-        value: https://${org-subdomain}pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/gateway/api/clusters/root:orgs:${org-name}/graphql
+        value: https://${org-subdomain}PM_BASE_DOMAIN:8443/gateway/api/clusters/root:orgs:${org-name}/graphql
       - name: NODE_EXTRA_CA_CERTS
         value: /etc/ssl/certs/ca-bundle.crt
       - name: OPENMFP_PORTAL_CONTEXT_AUTHZ_WEBHOOK_URL
@@ -58,20 +58,20 @@ spec:
     gatewayApi:
       httpRoute:
         hostnames:
-          - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-          - '*.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com'
+          - PM_BASE_DOMAIN
+          - '*.PM_BASE_DOMAIN'
         parentRefs:
           - kind: Gateway
             name: k8sapi-gateway
     hostAliases:
       enabled: true
       entries:
-        - ip: 100.104.59.216
+        - ip: TRAEFIK_SERVICE_IP
           hostnames:
-            - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-            - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-            - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-            - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - PM_BASE_DOMAIN
+            - kcp.api.PM_BASE_DOMAIN
+            - root.kcp.PM_BASE_DOMAIN
+            - triton.kcp.PM_BASE_DOMAIN
     http:
       protocol: https
     initContainers:

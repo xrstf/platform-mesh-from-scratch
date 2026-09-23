@@ -41,11 +41,11 @@ metadata:
   namespace: platform-mesh-system
 spec:
   secretName: domain-certificate
-  commonName: pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+  commonName: PM_BASE_DOMAIN
   dnsNames:
-    - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-    - '*.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com'
-    - '*.services.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com'
+    - PM_BASE_DOMAIN
+    - '*.PM_BASE_DOMAIN'
+    - '*.services.PM_BASE_DOMAIN'
   usages:
     - digital signature
     - key encipherment

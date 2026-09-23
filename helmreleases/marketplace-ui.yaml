@@ -22,12 +22,12 @@ spec:
       retries: 3
   values:
     contentConfig:
-      baseDomain: pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+      baseDomain: PM_BASE_DOMAIN
       protocol: https
     exposure:
       hostnames:
-        - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-        - '*.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com'
+        - PM_BASE_DOMAIN
+        - '*.PM_BASE_DOMAIN'
     gatewayApi:
       enabled: true
     http:
