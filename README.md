@@ -150,6 +150,10 @@ If your Platform Mesh does not come up, check these things:
   the rest of Platform Mesh. These must also be up and running before PM can fully be installed.
 * `infra` Helm chart fails with API errors about fields not existing: You installed Flux >2.18.
    Downgrade Flux to 2.17.2.
+* The setup is seemingly stuck and not progressing with the `HelmReleases`? Make sure you increased
+  Flux's default concurrency: The default (5) will make it so the rollout will take forever, since
+  right now no dependencies exist between the `HelmReleases` and Flux cannot yet better order the
+  installation. Check the bash snippet above for the necessary changes to Flux.
 * In order to make sure kcp runs:
    * Does the `rebac-authz-webhook-cert` Secret exist? If not, make sure the `rebac-authz-webhook`
      HelmRelease is getting installed (it's okay for it to be failing, but it needs to at least
