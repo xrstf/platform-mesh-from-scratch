@@ -22,52 +22,29 @@ spec:
     remediation:
       retries: 3
   values:
-    autoscaling:
-      enabled: false
     checkQueryCache:
       enabled: true
       limit: 10000
       ttl: 10s
     datastore:
-      applyMigrations: true
       engine: postgres
       maxOpenConns: 30
       migrationType: initContainer
-      # migrations:
-      #   image:
-      #     pullPolicy: Always
-      #     repository: groundnuty/k8s-wait-for
-      #     tag: v2.0
-      uri: postgres://postgres:$(OPENFGA_POSTGRES_PASSWORD)@openfga-postgres.platform-mesh-system.svc.cluster.local:5432/postgres?sslmode=disable
+      existingSecret: openfga-datastore-secret
+      secretKeys:
+        usernameKey: username
+        passwordKey: password
     extraEnvVars:
       - name: OPENFGA_EXPERIMENTALS
         value: enable-list-users
-      - name: OPENFGA_POSTGRES_PASSWORD
-        valueFrom:
-          secretKeyRef:
-            name: openfga-postgres-credentials
-            key: password
-    # image:
-    #   repository: registry-1.docker.io/openfga/openfga
-    #   tag: v1.14.0
-    log:
-      level: info
+      # TODO: This should/can be predefined in the Helm chart now, since it is separated from the credentials.
+      - name: OPENFGA_DATASTORE_URI
+        value: postgres://platform-mesh-pg-rw.platform-mesh-system.svc.cluster.local:5432/openfga?sslmode=disable
     migrate:
       annotations:
         sidecar.istio.io/inject: "false"
-      repository: openfga/openfga
     podAnnotations:
       traffic.sidecar.istio.io/excludeInboundPorts: "2112"
-    postgresql:
-      auth:
-        existingSecret: openfga-postgres-credentials
-      enabled: true
-      image:
-        digest: sha256:8082cd604a96fd00f5d2082614d6d863e3d67b4c0c4d835c39ae13defcce21e2
-        registry: ghcr.io
-        repository: platform-mesh/upstream-images/postgresql
-        tag: 17.9.0-debian-12-r3
-      nameOverride: postgres
     replicaCount: 1
     telemetry:
       trace:

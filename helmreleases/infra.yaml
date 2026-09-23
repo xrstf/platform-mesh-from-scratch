@@ -27,38 +27,17 @@ spec:
       retries: 3
   values:
     cnpg:
-      # cluster:
-      #   image:
-      #     digest: sha256:5e30290fba3d990b08a9caea6ddb49c661ad8246cbb2688adad7e6cc78df6c3f
-      #     registry: ghcr.io
-      #     repository: cloudnative-pg/postgresql
-      #     tag: "18.3"
-      enabled: true
-      roles:
-        keycloak:
-          username: keycloak
-          # password is supplied by the pre-created cnpg-keycloak-user secret (see setup.sh)
-        openfga:
-          username: openfga
-          # password is supplied by the pre-created cnpg-openfga-user secret (see setup.sh)
-    cors:
       enabled: true
     dex:
       enabled: true
       gatewayApi:
         hostnames:
           - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-      # image:
-      #   digest: sha256:1b4a6eee8550240b0faedad04d984ca939513650e1d9bd423502c67355e3822f
-      #   registry: ghcr.io
-      #   repository: dexidp/dex
-      #   tag: v2.42.0
       issuer: https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/dex
       staticClient:
         redirectURIs:
           - https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/keycloak/realms/default/broker/dex/endpoint
     gatewayApi:
-      enabled: true
       infrastructure:
         annotations:
           dns.gardener.cloud/class: garden
@@ -115,35 +94,16 @@ spec:
             - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
             - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
     kcp:
-      auth:
-        serviceAccount:
-          enabled: true
-      # etcd:
-      #   backup:
-      #     image:
-      #       repository: europe-docker.pkg.dev/gardener-project/public/gardener/etcdbrctl
-      #       tag: v0.41.2
-      #   image:
-      #     repository: europe-docker.pkg.dev/gardener-project/public/gardener/etcd-wrapper
-      #     tag: v0.6.2
       external:
         hostname: kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
       frontProxy:
         clusterIP: 100.111.17.126
-        port: 8443
-      # image:
-      #   repository: ghcr.io/kcp-dev/kcp
-      #   tag: v0.32.2
       rootShard:
         hostname: root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
         shardBaseURL: https://root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/
-        extraArgs:
-          - --feature-gates=WorkspaceAuthentication=true,CacheAPIs=true
       shards:
         - hostname: triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
           name: triton
-      webhook:
-        enabled: true
     keycloak:
       gatewayApi:
         hostnames:
@@ -151,46 +111,24 @@ spec:
       keycloakConfig:
         redirectUrls:
           - https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/callback*
+        # TODO: Default uses a URL without port and using "keycloak" as the service name, not
+        # keycloak-service. We override that name further down in this file. Why? Could we not
+        # use the default from the Helm chart in both places?
         url: http://keycloak-service.platform-mesh-system.svc.cluster.local:8080/keycloak
       operator:
+        enabled: true
         # Keycloak is behind Traefik, which does TLS termination.
+        # TODO: Should the default values already set this to true?
         httpEnabled: true
         admin:
           username: keycloak-admin
           # password and secret are supplied by the pre-created keycloak-admin secret (see setup.sh)
         caSecret: domain-certificate-ca
-        db:
-          username: keycloak
-          # password is supplied by the pre-created keycloak-db-credentials secret (see setup.sh)
-        enabled: true
-        health:
-          liveness:
-            failureThreshold: 3
-            path: /keycloak/health/live
-          periodSeconds: 10
-          port: 9000
-          readiness:
-            initialDelaySeconds: 0
-            path: /keycloak/health/ready
-            periodSeconds: 10
-          startup:
-            failureThreshold: 600
-            path: /keycloak/health
         hostname: https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/keycloak/
-        # image:
-        #   digest: sha256:5feb71bdf548ee2f7ff33ba2eba082a94de5c16d1a50de8bca71ab78a89c986b
-        #   registry: ghcr.io
-        #   repository: platform-mesh/custom-images/keycloak
-        #   tag: v26.7.2
-        # waitForDb:
-        #   image:
-        #     digest: sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f05b07adfab0
-        #     registry: registry-1.docker.io
-        #     repository: library/busybox
-        #     tag: "1.37"
       service:
         name: keycloak-service
         port: 8080
+    # TODO: Why does PM seemingly work without these?
     # traefik:
     #   accessControlAllowOriginList:
     #     - http://localhost:4200

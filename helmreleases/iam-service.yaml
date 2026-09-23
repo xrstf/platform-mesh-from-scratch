@@ -22,14 +22,12 @@ spec:
       retries: 3
   values:
     caSecret: domain-certificate-ca
-    cors:
-      enabled: true
     exposure:
       hostnames:
         - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
         - '*.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com'
-    extraArgs:
-      - --no-json
+    # Mostly performance improvements for routing traffic. Should be able
+    # to skip configuring this.
     hostAliases:
       enabled: true
       entries:
@@ -39,10 +37,5 @@ spec:
             - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
             - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
             - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-    # image:
-    #   digest: sha256:f7ab5679b832b084cdc160692133c5315746b932dd336301a84e6071439a56c2
-    #   registry: ghcr.io
-    #   repository: platform-mesh/platform-mesh/iam-service
-    #   tag: v0.19.0
     keycloak:
       baseUrl: https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/keycloak

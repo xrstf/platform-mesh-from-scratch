@@ -20,7 +20,3 @@ spec:
   upgrade:
     remediation:
       retries: 3
-  # values:
-  #   image:
-  #     repository: ghcr.io/cloudnative-pg/cloudnative-pg
-  #     tag: 1.29.0

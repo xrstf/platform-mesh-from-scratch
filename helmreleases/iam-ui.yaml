@@ -25,8 +25,3 @@ spec:
       hostnames:
         - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
         - '*.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com'
-    # image:
-    #   digest: sha256:a67d8cf21f116847e03c19287bb084c0b2783e67acf5be8bbc2ab09c197c921d
-    #   registry: ghcr.io
-    #   repository: platform-mesh/iam-ui
-    #   tag: v0.12.14

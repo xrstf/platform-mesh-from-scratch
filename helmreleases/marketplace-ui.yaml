@@ -32,10 +32,3 @@ spec:
       enabled: true
     http:
       protocol: https
-    # image:
-    #   digest: sha256:d63236f34518d4b96a73b1494912898dfe0b96436db0e64bde3af626fcdc59c7
-    #   registry: ghcr.io
-    #   repository: platform-mesh/marketplace-ui
-    #   tag: v0.14.0
-    istio:
-      enabled: false

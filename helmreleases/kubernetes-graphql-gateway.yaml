@@ -21,11 +21,7 @@ spec:
     remediation:
       retries: 3
   values:
-    gateway:
-      logLevel: trace
-      playground: true
     gatewayApi:
-      enabled: true
       httpRoute:
         hostnames:
           - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
@@ -39,17 +35,10 @@ spec:
             - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
             - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
             - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-    # image:
-    #   digest: sha256:2e6c9c111893569208f6461f6169b065c754a0dd114903f7481a39e002f50875
-    #   registry: ghcr.io
-    #   repository: platform-mesh/platform-mesh/kubernetes-graphql-gateway
-    #   tag: v1.20.0
-    istio:
-      enabled: false
     kubeConfig:
-      enabled: true
       secretName: kubernetes-graphql-gateway-kubeconfig
     listener:
+      # TODO: Where and how? This is nowhere in our Helm charts.
       virtualWorkspacesConfig:
         content:
           virtualWorkspaces:
@@ -60,10 +49,6 @@ spec:
               name: marketplace
               url: https://frontproxy-front-proxy.platform-mesh-system:8443/services/marketplace
         enabled: true
-    sentry:
-      environment: dev
-    tracing:
-      enabled: false
     trust:
       default:
         audience: default

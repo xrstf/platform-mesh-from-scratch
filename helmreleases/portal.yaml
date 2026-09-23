@@ -30,7 +30,7 @@ spec:
         discoveryUrl: https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/keycloak/realms/${org-name}/.well-known/openid-configuration
     cookieDomain: pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
     crdGatewayApiUrl: https://${org-subdomain}pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com/api/kubernetes-graphql-gateway/root:orgs:${org-name}/graphql
-    environment: kind
+    environment: production
     extraEnvVars:
       - name: OPENMFP_PORTAL_CONTEXT_IAM_SERVICE_API_URL
         value: https://${org-subdomain}pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/iam/graphql
@@ -56,7 +56,6 @@ spec:
         name: combined-ca
     frontendPort: "8443"
     gatewayApi:
-      enabled: true
       httpRoute:
         hostnames:
           - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
@@ -75,11 +74,6 @@ spec:
             - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
     http:
       protocol: https
-    # image:
-    #   digest: sha256:3c937255cac25e8e447834a45c542fab519cffd0cabe025d71f9a3e29e98e0bf
-    #   registry: ghcr.io
-    #   repository: platform-mesh/portal
-    #   tag: v0.26.12
     initContainers:
       - command:
           - sh

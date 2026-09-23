@@ -20,7 +20,3 @@ spec:
   upgrade:
     remediation:
       retries: 3
-  # values:
-  #   image:
-  #     repository: ghcr.io/kcp-dev/kcp-operator
-  #     tag: v0.8.0

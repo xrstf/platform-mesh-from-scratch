@@ -29,14 +29,5 @@ spec:
       certManager:
         enabled: false
     manager:
-      # collectorImage:
-      #   repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-k8s
-      #   tag: 0.152.1
       featureGatesMap:
         operator.targetallocator.mtls: true
-      # image:
-      #   repository: ghcr.io/open-telemetry/opentelemetry-operator/opentelemetry-operator
-      #   tag: 0.152.0
-      # targetAllocatorImage:
-      #   repository: ghcr.io/open-telemetry/opentelemetry-operator/target-allocator
-      #   tag: 0.152.0

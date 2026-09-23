@@ -26,11 +26,11 @@ spec:
       - --kcp-front-proxy-port=8443
       - --kcp-url=https://frontproxy-front-proxy.platform-mesh-system:8443
       - --subroutines-feature-toggles-enabled=true
-      - --subroutines-managed-provider-deploy-enabled=false
-      - --subroutines-deployment-enabled=false
-      - --no-json=true
       - --idp-welcome-additional-redirect-uris=https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/callback*
       - --idp-welcome-additional-post-logout-redirect-uris=https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/logout*
+      # make sure the PM operator does not attempt to manage HelmReleases
+      - --subroutines-managed-provider-deploy-enabled=false
+      - --subroutines-deployment-enabled=false
     extraVolumeMounts:
       - mountPath: /etc/platformmesh
         name: external-platformmesh-deployment
@@ -52,9 +52,3 @@ spec:
             - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
     idp:
       registrationAllowed: true
-    # image:
-    #   registry: ghcr.io
-    #   repository: platform-mesh/platform-mesh/platform-mesh-operator
-    #   tag: v0.89.0
-    log:
-      noJson: true

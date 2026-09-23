@@ -79,8 +79,8 @@ ensure_keycloak_db_secrets() {
 }
 
 ensure_openfga_db_secrets() {
-  if secret_exists cnpg-openfga-user && secret_exists openfga-postgres-credentials; then
-    info "Secrets cnpg-openfga-user and openfga-postgres-credentials already exist, skipping"
+  if secret_exists cnpg-openfga-user && secret_exists openfga-datastore-secret; then
+    info "Secrets cnpg-openfga-user and openfga-datastore-secret already exist, skipping"
     return
   fi
 
@@ -90,23 +90,23 @@ ensure_openfga_db_secrets() {
   if secret_exists cnpg-openfga-user; then
     username="$(secret_key cnpg-openfga-user username)"
     password="$(secret_key cnpg-openfga-user password)"
-  elif secret_exists openfga-postgres-credentials; then
-    password="$(secret_key openfga-postgres-credentials password)"
   else
     password="$(openssl rand -base64 32)"
   fi
 
-  kubectl create secret generic cnpg-openfga-user \
-    --namespace "$NAMESPACE" \
-    --from-literal=username="$username" \
-    --from-literal=password="$password"
+  if ! secret_exists cnpg-openfga-user; then
+    kubectl create secret generic cnpg-openfga-user \
+      --namespace "$NAMESPACE" \
+      --from-literal=username="$username" \
+      --from-literal=password="$password"
+  fi
 
-  kubectl create secret generic openfga-postgres-credentials \
+  kubectl create secret generic openfga-datastore-secret \
     --namespace "$NAMESPACE" \
     --from-literal=password="$password" \
-    --from-literal=postgres-password="$password"
+    --from-literal=username="$username"
 
-  info "Ensured secrets cnpg-openfga-user and openfga-postgres-credentials"
+  info "Ensured secrets cnpg-openfga-user and openfga-datastore-secret"
 }
 
 ensure_search_operator_secret() {

@@ -21,6 +21,7 @@ spec:
     remediation:
       retries: 3
   values:
+    kcpKubeconfig: init-agent-kubeconfig
     configWorkspace: root:platform-mesh-system
     hostAliases:
       enabled: true
@@ -31,10 +32,3 @@ spec:
             - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
             - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
             - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-    # image:
-    #   repository: ghcr.io/kcp-dev/init-agent
-    #   tag: v0.2.0
-    kcpKubeconfig: init-agent-kubeconfig
-    leaderElection:
-      enabled: false
-    replicas: 1

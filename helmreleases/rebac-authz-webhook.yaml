@@ -23,7 +23,14 @@ spec:
   values:
     certManager:
       createCA: true
-      enabled: true
+    certificates:
+      create: true
+    istio:
+      # TODO: Has nothing to do with Istio at all, but the cert template in the chart simply
+      # uses this field. The cert will also have a wonky IP embedded that we do not care about.
+      # Todo is to cleanup the chart a bit and do not use an istio field for a cert that is
+      # used without istio.
+      dnsNames: [rebac-authz-webhook.platform-mesh-system.svc.cluster.local]
     hostAliases:
       enabled: true
       entries:
@@ -33,16 +40,3 @@ spec:
             - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
             - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
             - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
-    # image:
-    #   digest: sha256:fbb6df9ad2af861c456990e7b41f43599774af3c5bc008020fd6d91f0193addb
-    #   registry: ghcr.io
-    #   repository: platform-mesh/platform-mesh/rebac-authz-webhook
-    #   tag: v0.12.0
-    istio:
-      dnsNames:
-        - rebac-authz-webhook.platform-mesh-system.svc.cluster.local
-      exposed: false
-    log:
-      level: debug
-    openfga:
-      url: openfga:8081

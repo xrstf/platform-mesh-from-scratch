@@ -30,10 +30,6 @@ spec:
       enabled: false
     gatewayClass:
       enabled: true
-    # image:
-    #   registry: registry-1.docker.io
-    #   repository: library/traefik
-    #   tag: v3.7.12
     ports:
       websecure:
         exposedPort: 8443
