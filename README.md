@@ -104,8 +104,8 @@ This step only needs to be performed once on a fresh install.
 ### Step 4: Install Components
 
 Your cluster is now ready to receive the `HelmReleases` and `OCIRepositories` that make up
-Platform Mesh. You will also need the CRDs for OCM, even though in this guide we are not making
-use of OCM. You can just apply them all:
+Platform Mesh. You will also need the CRDs for OCM, even though in this guide we are skipping over
+OCM and apply `HelmReleases` directly. You can just apply them all:
 
 ```bash
 export KUBECONFIG=...
