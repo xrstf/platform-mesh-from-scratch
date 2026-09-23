@@ -172,6 +172,3 @@ kubectl apply --filename ocmcrds
 # Install Platform Mesh.
 kubectl apply --filename ocirepositories
 kubectl apply --filename helmreleases
-
-# This can fail on the first attempt while CRDs are still settling.
-kubectl apply --filename stuff || true
