@@ -7,6 +7,14 @@ absolutely not use it as a starting point for production.
 
 This repository contains manifests for Platform Mesh version **0.5.2**.
 
+## NOTE
+
+This repository is the result of a spike, not any preview of any future Platform Mesh
+installation procedures.
+
+The setup was tested on a Gardener shoot using Kubernetes 1.36.3 and relying on Gardener's
+DNS integration.
+
 ## Overview
 
 This repository represents the absolute bare minimum that is required to get PM working.
@@ -16,12 +24,10 @@ applied to your cluster.
 The installation itself is rather simple:
 
 * Prepare the manifests.
-* Run the `setup.sh`, which will
-   * install Flux
-   * create secure internal credential Secrets
-   * apply the OpenComponentModel CRDs
-   * apply all OCIRepositories used by Platform Mesh
-   * apply all HelmReleases used by Platform Mesh
+* Install Flux into the cluster.
+* Run the `create-secrets.sh`; this only needs to be done on the very first installation.
+* Apply the `HelmRelease` and `OCIRepositories`.
+* Apply configuration from `manifests/`.
 * Currently, as a last setup step, you will need to perform one manual step to setup a
   Secret for kcp.
 
@@ -47,17 +53,55 @@ and replace the following placeholders in all files in `helmreleases` and `manif
   used to configure host aliases on many pods to improve network flow and bootstrapping.
 * `TRAEFIK_SERVICE_IP` – same, but for the Traefik LoadBalancer Service.
 
-### Step 2: Run `setup.sh`
+### Step 2: Install Flux 2.17
 
-The script will take care of most of the bootstrapping for you. If you already have Flux
-installed from somewhere else, you can comment it out in the `setup.sh`, it's just there for
-convenience.
+In case Flux is not yet set up, install it any way you like, for example:
 
-Once the script has finished, your installation is nearly complete. You should see a lot of
-`HelmRelease` objects in the `platform-mesh-system` namespace, most of them not yet ready.
-That's okay, we need a bit more fine tuning.
+```bash
+helm upgrade \
+  --install \
+  --namespace flux-system --create-namespace \
+  --version 2.17.2 \
+  --set imageAutomationController.create=false \
+  --set imageReflectionController.create=false \
+  --set notificationController.create=false \
+  --set helmController.container.additionalArgs[0]="--concurrent=19" \
+  --set sourceController.container.additionalArgs[0]="--requeue-dependency=5s" \
+  flux oci://ghcr.io/fluxcd-community/charts/flux2
 
-### Step 3: Apply Manifests
+kubectl wait --namespace flux-system --for=condition=available deployment/helm-controller
+kubectl wait --namespace flux-system --for=condition=available deployment/source-controller
+kubectl wait --namespace flux-system --for=condition=available deployment/kustomize-controller
+```
+
+**NB:** Platform Mesh 0.5.2 is not compatible with Flux >= 2.18!
+
+### Step 3: Run `create-secrets.sh`
+
+You need to setup some credentials once, for Keycloak, OpenFGA etc. Simply run the script:
+
+```bash
+export KUBECONFIG=...
+./create-secrets.sh
+```
+
+### Step 4: Install Components
+
+Your cluster is now ready to receive the `HelmReleases` and `OCIRepositories` that make up
+Platform Mesh. You will also need the CRDs for OCM, even though in this guide we are not making
+use of OCM. You can just apply them all:
+
+```bash
+export KUBECONFIG=...
+kubectl apply --filename ocmcrds
+kubectl apply --filename ocirepositories
+kubectl apply --filename helmreleases
+```
+
+Flux will now begin to install everything, but it's expected to see lots of failing pods for now.
+We have to configure Platform Mesh first and apply one custom object.
+
+### Step 5: Apply Manifests
 
 There are four more manifest we need to apply. This is not yet fully automated, but soon will
 be:
@@ -97,3 +141,34 @@ Platform Mesh will now slowly come to life.
 ### Test
 
 You should now be able to open `https://<PM_BASE_DOMAIN>:8443/` in your browser.
+
+## Runbook
+
+If your Platform Mesh does not come up, check these things:
+
+* etcd, Keycloak and OpenFGA are mostly standalone and should come up on their own, regardless of
+  the rest of Platform Mesh. These must also be up and running before PM can fully be installed.
+* `infra` Helm chart fails with API errors about fields not existing: You installed Flux >2.18.
+   Downgrade Flux to 2.17.2.
+* In order to make sure kcp runs:
+   * Does the `rebac-authz-webhook-cert` Secret exist? If not, make sure the `rebac-authz-webhook`
+     HelmRelease is getting installed (it's okay for it to be failing, but it needs to at least
+     once provision the necessary certificate).
+   * Did you manually create the `kcp-webhook-secret`, as described above? If not, do so.
+   * If no `root-kcp-..` Pod shows up, restart the kcp-operator. Note that when the Secret is missing,
+     the kcp-operator is not logging any errors. This is unfortunate since it hides the underlying
+     issue that could prevent it from creating the RootShard. Can be fixed upstream.
+   * If still no Pod shows up, check if the `infra` Helm chart deployed the `RootShard` object. If
+     not, make sure Flux processed the Helm chart.
+* Once kcp is up, you can expect the Platform Mesh Operator to provision resources inside kcp. This
+  process takes some time and during it, the operator will log lots of errors relating to missing
+  APIs like `ContentConfigurations` or `ProviderPermissions`. This is normal, give it a few minutes.
+* Only when the Platform Mesh Operator has finished setting up kcp will it create a `-kubeconfig`
+  Secret for all the other Platform Mesh components. You will notice a sudden burst of Pods changing
+  from ContainerCreating to Running.
+* From there, the Security Operator can provision OpenFGA, which will unblock further components from
+  coming up.
+* The rebac-authz-webhook needs kcp, but is often stuck in a CrashLoop. You can simply delete the
+  Pod to kickstart a new one.
+* The `HelmReleases` have a timeout of 15 minutes. Any operations will have a significant delay.
+  You can lower the timeout to make incremental changes quicker to apply.
