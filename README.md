@@ -15,6 +15,20 @@ installation procedures.
 The setup was tested on a Gardener shoot using Kubernetes 1.36.3 and relying on Gardener's
 DNS integration.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Installation](#installation)
+  - [Step 1: Prepare Manifests](#step-1-prepare-manifests)
+  - [Step 2: Install Flux 2.17](#step-2-install-flux-217)
+  - [Step 3: Run `create-secrets.sh`](#step-3-run-create-secretssh)
+  - [Step 4: Install Components](#step-4-install-components)
+  - [Step 5: Apply Manifests](#step-5-apply-manifests)
+  - [Time to Wait](#time-to-wait)
+  - [Test](#test)
+- [Upgrading](#upgrading)
+- [Runbook](#runbook)
+
 ## Overview
 
 This repository represents the absolute bare minimum that is required to get PM working.
