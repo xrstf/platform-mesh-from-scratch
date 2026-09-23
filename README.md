@@ -138,9 +138,7 @@ in PM 0.5.2 you have to perform this step manually:
 3. `kubectl apply -f manifests/kcp-webhook-secret.yaml`.
 
 Once you apply this, keep a lookout for a `root-kcp-...` Pod in your `platform-mesh-system` namespace.
-It it doesn't appear within a minute, restart the kcp-operator:
-
-`k -n kcp-operator delete pods --all`.
+It it doesn't appear within a minute, restart the kcp-operator: `kubectl -n kcp-operator delete pods --all`.
 
 ### Time to Wait
 
