@@ -85,6 +85,8 @@ export KUBECONFIG=...
 ./create-secrets.sh
 ```
 
+This step only needs to be performed once on a fresh install.
+
 ### Step 4: Install Components
 
 Your cluster is now ready to receive the `HelmReleases` and `OCIRepositories` that make up
@@ -141,6 +143,12 @@ Platform Mesh will now slowly come to life.
 ### Test
 
 You should now be able to open `https://<PM_BASE_DOMAIN>:8443/` in your browser.
+
+## Upgrading
+
+Upgrades have not been thoroughly tested, but the procedure would be:
+
+1. Apply the new `HelmReleases` and `OCIRepositories`.
 
 ## Runbook
 
