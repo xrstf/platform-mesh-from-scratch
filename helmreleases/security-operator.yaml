@@ -1,0 +1,85 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: security-operator
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: security-operator
+    namespace: platform-mesh-system
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: security-operator
+  targetNamespace: platform-mesh-system
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    baseDomain: pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443
+    caSecret: domain-certificate-ca
+    crds:
+      enabled: false
+    idp:
+      registrationAllowed: true
+      allowUnverifiedEmails: true
+      setDefaultPassword: true
+    keycloak:
+      baseUrl: https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/keycloak
+    fga:
+      extraArgs:
+        - --idp-smtp-server=mailpit.platform-mesh-system.svc.cluster.local
+        - --idp-smtp-port=1025
+        - --idp-from-address=keycloak@pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+        - --set-default-password
+        - --idp-registration-allowed
+        - --domain-ca-lookup
+        - --development-allow-unverified-emails
+        - --idp-additional-redirect-urls=https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/callback*
+      inviteKeycloakBaseUrl: https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/keycloak
+      target: openfga.platform-mesh-system.svc.cluster.local:8081
+    hostAliases:
+      enabled: true
+      entries:
+        - ip: 100.104.59.216
+          hostnames:
+            - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+    # image:
+    #   digest: sha256:9b26032812fde11c34fb340568648ba6add2c85a26fb2b3731fd784950ab8f70
+    #   registry: ghcr.io
+    #   repository: platform-mesh/platform-mesh/security-operator
+    #   tag: v0.36.0
+    initializer:
+      extraArgs:
+        - --domain-ca-lookup
+        - --idp-smtp-server=mailpit.platform-mesh-system.svc.cluster.local
+        - --idp-smtp-port=1025
+        - --idp-from-address=keycloak@pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+        - --development-allow-unverified-emails
+        - --idp-additional-redirect-urls=https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/callback*
+        - --idp-registration-allowed
+      kubeconfigSecret: security-initializer-kubeconfig
+    kubeconfigSecret: security-operator-kubeconfig
+    log:
+      level: debug
+      noJson: true
+    operator:
+      maxConcurrentReconciles: 1
+      shutdownTimeout: 1m
+    system:
+      extraArgs:
+        - --idp-smtp-server=mailpit.platform-mesh-system.svc.cluster.local
+        - --idp-smtp-port=1025
+        - --idp-from-address=keycloak@pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+        - --set-default-password
+        - --idp-registration-allowed
+    terminator:
+      kubeconfigSecret: security-terminator-kubeconfig

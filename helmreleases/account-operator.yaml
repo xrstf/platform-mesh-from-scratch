@@ -1,0 +1,52 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: account-operator
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: account-operator
+    namespace: platform-mesh-system
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: account-operator
+  targetNamespace: platform-mesh-system
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    crds:
+      enabled: false
+    hostAliases:
+      enabled: true
+      entries:
+        - ip: 100.104.59.216
+          hostnames:
+            - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+    # image:
+    #   digest: sha256:fa49232260633e9866398d17ab46f4e2dc4d7e4cc6fb3c9d86f0a1d25259b24f
+    #   registry: ghcr.io
+    #   repository: platform-mesh/platform-mesh/account-operator
+    #   tag: v0.15.5
+    kcp:
+      apiExportEndpointSliceName: core.platform-mesh.io
+    kubeconfigSecret: account-operator-kubeconfig
+    log:
+      level: debug
+      noJson: true
+    subroutines:
+      fga:
+        grpcAddr: openfga:8081
+    tracing:
+      collector:
+        host: observability-opentelemetry-collector.observability.svc.cluster.local:4317
+      enabled: false

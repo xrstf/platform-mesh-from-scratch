@@ -1,0 +1,42 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: virtual-workspaces
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: virtual-workspaces
+    namespace: platform-mesh-system
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: virtual-workspaces
+  targetNamespace: platform-mesh-system
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    deployment:
+      resourceSchemaName: v250704-6d57f16.contentconfigurations.ui.platform-mesh.io
+      resourceSchemaWorkspace: root:platform-mesh-system
+      serverUrl: https://frontproxy-front-proxy.platform-mesh-system:8443
+    hostAliases:
+      enabled: true
+      entries:
+        - ip: 100.104.59.216
+          hostnames:
+            - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+    # image:
+    #   digest: sha256:bb2ee6241719d862ade2012baac62c33a32fc8f1c9a7d6673c276316f80c13b9
+    #   registry: ghcr.io
+    #   repository: platform-mesh/platform-mesh/virtual-workspaces
+    #   tag: v0.17.0
+    virtualWorkspaceSecretName: virtual-workspaces-cert

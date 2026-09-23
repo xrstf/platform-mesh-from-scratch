@@ -1,0 +1,48 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: iam-service
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: iam-service
+    namespace: platform-mesh-system
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: iam-service
+  targetNamespace: platform-mesh-system
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    caSecret: domain-certificate-ca
+    cors:
+      enabled: true
+    exposure:
+      hostnames:
+        - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+        - '*.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com'
+    extraArgs:
+      - --no-json
+    hostAliases:
+      enabled: true
+      entries:
+        - ip: 100.104.59.216
+          hostnames:
+            - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+    # image:
+    #   digest: sha256:f7ab5679b832b084cdc160692133c5315746b932dd336301a84e6071439a56c2
+    #   registry: ghcr.io
+    #   repository: platform-mesh/platform-mesh/iam-service
+    #   tag: v0.19.0
+    keycloak:
+      baseUrl: https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/keycloak

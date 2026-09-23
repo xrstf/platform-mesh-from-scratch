@@ -1,0 +1,73 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: openfga
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: openfga
+    namespace: platform-mesh-system
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: openfga
+  suspend: false
+  targetNamespace: platform-mesh-system
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    autoscaling:
+      enabled: false
+    checkQueryCache:
+      enabled: true
+      limit: 10000
+      ttl: 10s
+    datastore:
+      applyMigrations: true
+      engine: postgres
+      maxOpenConns: 30
+      migrationType: initContainer
+      # migrations:
+      #   image:
+      #     pullPolicy: Always
+      #     repository: groundnuty/k8s-wait-for
+      #     tag: v2.0
+      uri: postgres://postgres:openfga-password@openfga-postgres.platform-mesh-system.svc.cluster.local:5432/postgres?sslmode=disable
+    extraEnvVars:
+      - name: OPENFGA_EXPERIMENTALS
+        value: enable-list-users
+    # image:
+    #   repository: registry-1.docker.io/openfga/openfga
+    #   tag: v1.14.0
+    log:
+      level: info
+    migrate:
+      annotations:
+        sidecar.istio.io/inject: "false"
+      repository: openfga/openfga
+    podAnnotations:
+      traffic.sidecar.istio.io/excludeInboundPorts: "2112"
+    postgresql:
+      auth:
+        password: openfga-password
+      enabled: true
+      image:
+        digest: sha256:8082cd604a96fd00f5d2082614d6d863e3d67b4c0c4d835c39ae13defcce21e2
+        registry: ghcr.io
+        repository: platform-mesh/upstream-images/postgresql
+        tag: 17.9.0-debian-12-r3
+      nameOverride: postgres
+    replicaCount: 1
+    telemetry:
+      trace:
+        enabled: true
+        otlp:
+          endpoint: observability-opentelemetry-collector.openmfp-observability.svc.cluster.local:4317
+          tls:
+            enabled: false

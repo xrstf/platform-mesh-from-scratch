@@ -1,0 +1,42 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: opentelemetry-operator
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: opentelemetry-operator
+    namespace: platform-mesh-system
+  dependsOn:
+    - name: cert-manager
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: opentelemetry-operator
+  targetNamespace: observability
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    admissionWebhooks:
+      autoGenerateCert:
+        enabled: true
+      certManager:
+        enabled: false
+    manager:
+      # collectorImage:
+      #   repository: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-k8s
+      #   tag: 0.152.1
+      featureGatesMap:
+        operator.targetallocator.mtls: true
+      # image:
+      #   repository: ghcr.io/open-telemetry/opentelemetry-operator/opentelemetry-operator
+      #   tag: 0.152.0
+      # targetAllocatorImage:
+      #   repository: ghcr.io/open-telemetry/opentelemetry-operator/target-allocator
+      #   tag: 0.152.0

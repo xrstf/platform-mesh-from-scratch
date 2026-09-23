@@ -1,0 +1,15 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: opentelemetry-operator
+  namespace: platform-mesh-system
+spec:
+  interval: 1m0s
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  provider: generic
+  ref:
+    tag: 0.114.1
+  timeout: 60s
+  url: oci://ghcr.io/open-telemetry/opentelemetry-helm-charts/opentelemetry-operator

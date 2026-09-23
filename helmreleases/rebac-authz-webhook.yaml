@@ -1,0 +1,48 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: rebac-authz-webhook
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: rebac-authz-webhook
+    namespace: platform-mesh-system
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: rebac-authz-webhook
+  targetNamespace: platform-mesh-system
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    certManager:
+      createCA: true
+      enabled: true
+    hostAliases:
+      enabled: true
+      entries:
+        - ip: 100.104.59.216
+          hostnames:
+            - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+    # image:
+    #   digest: sha256:fbb6df9ad2af861c456990e7b41f43599774af3c5bc008020fd6d91f0193addb
+    #   registry: ghcr.io
+    #   repository: platform-mesh/platform-mesh/rebac-authz-webhook
+    #   tag: v0.12.0
+    istio:
+      dnsNames:
+        - rebac-authz-webhook.platform-mesh-system.svc.cluster.local
+      exposed: false
+    log:
+      level: debug
+    openfga:
+      url: openfga:8081

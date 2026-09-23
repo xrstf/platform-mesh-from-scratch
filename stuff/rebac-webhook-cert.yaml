@@ -1,0 +1,20 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: rebac-authz-webhook-issuer
+  namespace: platform-mesh-system
+spec:
+  selfSigned: {}
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rebac-authz-webhook-cert
+  namespace: platform-mesh-system
+spec:
+  dnsNames:
+    - rebac-authz-webhook.platform-mesh-system.svc.cluster.local
+  issuerRef:
+    name: rebac-authz-webhook-issuer
+  secretName: rebac-authz-webhook-cert

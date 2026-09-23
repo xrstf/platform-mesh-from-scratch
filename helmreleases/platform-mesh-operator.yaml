@@ -1,0 +1,60 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    applyset.kubernetes.io/part-of: applyset-pguqrehKuI9GtNvyY3TnvmuloOAWsDu3fft-YIgC5j0-v1
+    kro.run/instance-id: 8a7b1d01-49e8-4bac-a01e-fd11f2c2ef3b
+    kro.run/instance-name: platform-mesh-operator
+    kro.run/instance-namespace: platform-mesh-system
+    kro.run/kro-version: v0.6.3-dirty
+    kro.run/owned: "true"
+    kro.run/resource-graph-definition-id: 3de95f78-a44f-460b-82c8-17edfe7b51c6
+    kro.run/resource-graph-definition-name: platform-mesh-operator
+  name: platform-mesh-operator
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: platform-mesh-operator
+    namespace: platform-mesh-system
+  interval: 1m
+  releaseName: platform-mesh-operator
+  targetNamespace: platform-mesh-system
+  timeout: 5m
+  values:
+    extraArgs:
+      - --kcp-front-proxy-port=8443
+      - --kcp-url=https://frontproxy-front-proxy.platform-mesh-system:8443
+      - --subroutines-feature-toggles-enabled=true
+      - --subroutines-managed-provider-deploy-enabled=false
+      - --subroutines-deployment-enabled=false
+      - --no-json=true
+      - --idp-welcome-additional-redirect-uris=https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/callback*
+      - --idp-welcome-additional-post-logout-redirect-uris=https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/logout*
+    extraVolumeMounts:
+      - mountPath: /etc/platformmesh
+        name: external-platformmesh-deployment
+        readOnly: true
+    extraVolumes:
+      - name: external-platformmesh-deployment
+        secret:
+          defaultMode: 420
+          optional: true
+          secretName: platform-mesh-kubeconfig
+    hostAliases:
+      enabled: true
+      entries:
+        - ip: 100.104.59.216
+          hostnames:
+            - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+    idp:
+      registrationAllowed: true
+    # image:
+    #   registry: ghcr.io
+    #   repository: platform-mesh/platform-mesh/platform-mesh-operator
+    #   tag: v0.89.0
+    log:
+      noJson: true

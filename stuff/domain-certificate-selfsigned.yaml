@@ -1,0 +1,58 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: domain-selfsigned-bootstrap
+  namespace: platform-mesh-system
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: domain-certificate-ca
+  namespace: platform-mesh-system
+spec:
+  isCA: true
+  commonName: platform-mesh-domain-ca
+  secretName: domain-certificate-ca
+  secretTemplate:
+    annotations:
+      xrstf.de/purpose: platform-mesh-domain-ca
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  issuerRef:
+    kind: Issuer
+    name: domain-selfsigned-bootstrap
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: domain-ca
+  namespace: platform-mesh-system
+spec:
+  ca:
+    secretName: domain-certificate-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: domain-certificate
+  namespace: platform-mesh-system
+spec:
+  secretName: domain-certificate
+  commonName: pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+  dnsNames:
+    - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+    - '*.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com'
+    - '*.services.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com'
+  usages:
+    - digital signature
+    - key encipherment
+    - server auth
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  issuerRef:
+    kind: Issuer
+    name: domain-ca

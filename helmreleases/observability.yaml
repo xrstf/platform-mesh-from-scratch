@@ -1,0 +1,64 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: observability
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: observability
+    namespace: platform-mesh-system
+  dependsOn:
+    - name: prometheus-operator-crds
+      namespace: platform-mesh-system
+    - name: opentelemetry-operator
+      namespace: platform-mesh-system
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: observability
+  targetNamespace: observability
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # otelCollector:
+    #   image:
+    #     digest: sha256:93aad750175cbf1a973ae1c5886c3371f4d800f61be25cdd26870b8441ffe9fa
+    #     registry: ghcr.io
+    #     repository: open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib
+    #     tag: 0.153.0
+    prometheus:
+      alertmanager:
+        enabled: false
+      # configmapReload:
+      #   prometheus:
+      #     image:
+      #       repository: quay.io/prometheus-operator/prometheus-config-reloader
+      #       tag: v0.91.0
+      kube-state-metrics:
+        enabled: false
+      prometheus-node-exporter:
+        enabled: false
+      prometheus-pushgateway:
+        enabled: false
+      server:
+        extraFlags:
+          - web.enable-remote-write-receiver
+        # image:
+        #   repository: quay.io/prometheus/prometheus
+        #   tag: v3.11.3
+        persistentVolume:
+          enabled: false
+    # serviceMonitors:
+    #   kcp:
+    #     certExtractor:
+    #       image:
+    #         digest: sha256:a67b11e95e953f550f020a41970185ccc5f83d78b86b8c575d02c904aa0f9cd7
+    #         registry: registry-1.docker.io
+    #         repository: bitnami/kubectl
+    #         tag: latest

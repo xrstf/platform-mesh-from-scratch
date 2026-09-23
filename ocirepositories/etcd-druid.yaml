@@ -1,0 +1,15 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: etcd-druid
+  namespace: platform-mesh-system
+spec:
+  interval: 1m0s
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  provider: generic
+  ref:
+    tag: v0.36.4
+  timeout: 60s
+  url: oci://europe-docker.pkg.dev/gardener-project/releases/charts/gardener/etcd-druid

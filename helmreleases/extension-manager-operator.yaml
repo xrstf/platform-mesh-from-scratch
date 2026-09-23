@@ -1,0 +1,46 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: extension-manager-operator
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: extension-manager-operator
+    namespace: platform-mesh-system
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: extension-manager-operator
+  targetNamespace: platform-mesh-system
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    crds:
+      enabled: false
+    hostAliases:
+      enabled: true
+      entries:
+        - ip: 100.104.59.216
+          hostnames:
+            - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+    # image:
+    #   digest: sha256:9371fcf05f761ef88de2944bedc79e804d144473376257cfcdaddcf0251613ec
+    #   registry: ghcr.io
+    #   repository: platform-mesh/platform-mesh/extension-manager-operator
+    #   tag: v0.10.0
+    kcp:
+      enabled: true
+      kubeconfigSecret: extension-manager-operator-kubeconfig
+    tracing:
+      collector:
+        host: observability-opentelemetry-collector.observability.svc.cluster.local:4317
+      enabled: false

@@ -1,0 +1,15 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: init-agent
+  namespace: platform-mesh-system
+spec:
+  interval: 1m0s
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  provider: generic
+  ref:
+    tag: 0.2.0
+  timeout: 60s
+  url: oci://ghcr.io/platform-mesh/ocm/charts/init-agent

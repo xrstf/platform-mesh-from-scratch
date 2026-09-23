@@ -1,0 +1,23 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: gateway-api-crds
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: gateway-api-crds
+    namespace: platform-mesh-system
+  dependsOn: []
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: gateway-api-crds
+  targetNamespace: default
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3

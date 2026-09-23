@@ -1,0 +1,41 @@
+apiVersion: core.platform-mesh.io/v1alpha1
+kind: PlatformMesh
+metadata:
+  annotations: {}
+  name: platform-mesh
+  namespace: platform-mesh-system
+spec:
+  exposure:
+    baseDomain: pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+    kcpFrontProxyClusterIP: 100.111.17.126
+    port: 8443
+    protocol: https
+    traefikClusterIP: 100.104.59.216
+  profileConfigMap:
+    name: platform-mesh-profile
+    namespace: platform-mesh-system
+  featureToggles:
+    - name: feature-enable-getting-started
+    - name: feature-disable-email-verification
+    - name: feature-accounts-in-accounts
+    - name: feature-enable-provider-permissions
+  kcp: {}
+  ocm:
+    component:
+      name: platform-mesh
+    referencePath: []
+    repo:
+      name: platform-mesh
+  values:
+    services:
+      infra:
+        values:
+          kcp:
+            external:
+              hostname: kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            rootShard:
+              hostname: root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+              shardBaseURL: https://root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/
+            shards:
+              - hostname: triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+                name: triton

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-mesh-profile
+  namespace: platform-mesh-system
+data:
+  # The platform-mesh operator does not manage any HelmReleases/ArgoApps,
+  # so the profile can be empty.
+  profile.yaml: '{}'

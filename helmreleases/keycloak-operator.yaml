@@ -1,0 +1,34 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: keycloak-operator
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: keycloak-operator
+    namespace: platform-mesh-system
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: keycloak-operator
+  targetNamespace: platform-mesh-system
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # image:
+    #   digest: sha256:f6079999aa773f1846de01c9014d19c3c677d35570361fd7c01c0830836e4041
+    #   registry: quay.io
+    #   repository: keycloak/keycloak-operator
+    #   tag: 26.7.2
+    # keycloakImage:
+    #   digest: sha256:5feb71bdf548ee2f7ff33ba2eba082a94de5c16d1a50de8bca71ab78a89c986b
+    #   registry: ghcr.io
+    #   repository: platform-mesh/custom-images/keycloak
+    #   tag: v26.7.2
+    watchNamespaces: platform-mesh-system

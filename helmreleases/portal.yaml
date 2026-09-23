@@ -1,0 +1,102 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: portal
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: portal
+    namespace: platform-mesh-system
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: portal
+  targetNamespace: platform-mesh-system
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    auth:
+      default:
+        baseDomain: pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+        clientId: welcome
+        clientSecretKey: attribute.client_secret
+        clientSecretName: portal-client-secret-welcome
+        discoveryUrl: https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/keycloak/realms/${org-name}/.well-known/openid-configuration
+    cookieDomain: pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+    crdGatewayApiUrl: https://${org-subdomain}pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com/api/kubernetes-graphql-gateway/root:orgs:${org-name}/graphql
+    environment: kind
+    extraEnvVars:
+      - name: OPENMFP_PORTAL_CONTEXT_IAM_SERVICE_API_URL
+        value: https://${org-subdomain}pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/iam/graphql
+      - name: OPENMFP_PORTAL_CONTEXT_CRD_GATEWAY_API_URL
+        value: https://${org-subdomain}pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/gateway/api/clusters/root:orgs:${org-name}/graphql
+      - name: NODE_EXTRA_CA_CERTS
+        value: /etc/ssl/certs/ca-bundle.crt
+      - name: OPENMFP_PORTAL_CONTEXT_AUTHZ_WEBHOOK_URL
+        value: https://rebac-authz-webhook.platform-mesh-system.svc.cluster.local:9443
+    extraVolumeMounts:
+      - mountPath: /etc/ssl/certs/ca-bundle.crt
+        name: combined-ca
+        readOnly: true
+        subPath: ca-bundle.crt
+    extraVolumes:
+      - name: domain-ca
+        secret:
+          secretName: domain-certificate-ca
+      - name: webhook-ca
+        secret:
+          secretName: rebac-authz-webhook-cert
+      - emptyDir: {}
+        name: combined-ca
+    frontendPort: "8443"
+    gatewayApi:
+      enabled: true
+      httpRoute:
+        hostnames:
+          - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+          - '*.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com'
+        parentRefs:
+          - kind: Gateway
+            name: k8sapi-gateway
+    hostAliases:
+      enabled: true
+      entries:
+        - ip: 100.104.59.216
+          hostnames:
+            - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+    http:
+      protocol: https
+    # image:
+    #   digest: sha256:3c937255cac25e8e447834a45c542fab519cffd0cabe025d71f9a3e29e98e0bf
+    #   registry: ghcr.io
+    #   repository: platform-mesh/portal
+    #   tag: v0.26.12
+    initContainers:
+      - command:
+          - sh
+          - -c
+          - cat /domain-ca/tls.crt /webhook-ca/ca.crt > /combined-ca/ca-bundle.crt
+        image: busybox:1.36
+        name: combine-ca
+        securityContext:
+          runAsUser: 1000
+        volumeMounts:
+          - mountPath: /domain-ca
+            name: domain-ca
+            readOnly: true
+          - mountPath: /webhook-ca
+            name: webhook-ca
+            readOnly: true
+          - mountPath: /combined-ca
+            name: combined-ca
+    kcp:
+      kubeconfigSecret: portal-kubeconfig

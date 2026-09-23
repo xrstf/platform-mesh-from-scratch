@@ -1,0 +1,41 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: marketplace-ui
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: marketplace-ui
+    namespace: platform-mesh-system
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: marketplace-ui
+  targetNamespace: platform-mesh-system
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    contentConfig:
+      baseDomain: pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+      protocol: https
+    exposure:
+      hostnames:
+        - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+        - '*.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com'
+    gatewayApi:
+      enabled: true
+    http:
+      protocol: https
+    # image:
+    #   digest: sha256:d63236f34518d4b96a73b1494912898dfe0b96436db0e64bde3af626fcdc59c7
+    #   registry: ghcr.io
+    #   repository: platform-mesh/marketplace-ui
+    #   tag: v0.14.0
+    istio:
+      enabled: false

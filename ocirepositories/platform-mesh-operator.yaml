@@ -1,0 +1,25 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  labels:
+    applyset.kubernetes.io/part-of: applyset-pguqrehKuI9GtNvyY3TnvmuloOAWsDu3fft-YIgC5j0-v1
+    kro.run/instance-id: 8a7b1d01-49e8-4bac-a01e-fd11f2c2ef3b
+    kro.run/instance-name: platform-mesh-operator
+    kro.run/instance-namespace: platform-mesh-system
+    kro.run/kro-version: v0.6.3-dirty
+    kro.run/owned: "true"
+    kro.run/resource-graph-definition-id: 3de95f78-a44f-460b-82c8-17edfe7b51c6
+    kro.run/resource-graph-definition-name: platform-mesh-operator
+  name: platform-mesh-operator
+  namespace: platform-mesh-system
+spec:
+  insecure: true
+  interval: 1m0s
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  provider: generic
+  ref:
+    tag: 0.46.0
+  timeout: 60s
+  url: oci://ghcr.io/platform-mesh/helm-charts/platform-mesh-operator

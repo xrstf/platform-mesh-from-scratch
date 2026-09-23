@@ -1,0 +1,32 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: iam-ui
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: iam-ui
+    namespace: platform-mesh-system
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: iam-ui
+  targetNamespace: platform-mesh-system
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    exposure:
+      hostnames:
+        - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+        - '*.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com'
+    # image:
+    #   digest: sha256:a67d8cf21f116847e03c19287bb084c0b2783e67acf5be8bbc2ab09c197c921d
+    #   registry: ghcr.io
+    #   repository: platform-mesh/iam-ui
+    #   tag: v0.12.14

@@ -1,0 +1,71 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: kubernetes-graphql-gateway
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: kubernetes-graphql-gateway
+    namespace: platform-mesh-system
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: kubernetes-graphql-gateway
+  targetNamespace: platform-mesh-system
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    gateway:
+      logLevel: trace
+      playground: true
+    gatewayApi:
+      enabled: true
+      httpRoute:
+        hostnames:
+          - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+          - '*.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com'
+    hostAliases:
+      enabled: true
+      entries:
+        - ip: 100.104.59.216
+          hostnames:
+            - pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - kcp.api.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - root.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+            - triton.kcp.pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com
+    # image:
+    #   digest: sha256:2e6c9c111893569208f6461f6169b065c754a0dd114903f7481a39e002f50875
+    #   registry: ghcr.io
+    #   repository: platform-mesh/platform-mesh/kubernetes-graphql-gateway
+    #   tag: v1.20.0
+    istio:
+      enabled: false
+    kubeConfig:
+      enabled: true
+      secretName: kubernetes-graphql-gateway-kubeconfig
+    listener:
+      virtualWorkspacesConfig:
+        content:
+          virtualWorkspaces:
+            - kubeconfig: /app/kubeconfig/kubeconfig
+              name: contentconfigurations
+              url: https://frontproxy-front-proxy.platform-mesh-system:8443/services/contentconfigurations
+            - kubeconfig: /app/kubeconfig/kubeconfig
+              name: marketplace
+              url: https://frontproxy-front-proxy.platform-mesh-system:8443/services/marketplace
+        enabled: true
+    sentry:
+      environment: dev
+    tracing:
+      enabled: false
+    trust:
+      default:
+        audience: default
+        jwksUrl: http://keycloak-headless.platform-mesh-system:8080/keycloak/realms/default/protocol/openid-connect/certs
+        trustedIssuer: https://pm-dev.kcp.shoot.canary.k8s-hana.ondemand.com:8443/keycloak/realms/default

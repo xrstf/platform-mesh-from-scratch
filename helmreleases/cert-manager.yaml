@@ -1,0 +1,41 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: cert-manager
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: cert-manager
+    namespace: platform-mesh-system
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: cert-manager
+  targetNamespace: default
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # cainjector:
+    #   image:
+    #     digest: sha256:a3ff773a577d8ff6ad1fe9ab4ea0b74873e0341e0aac5d9411f3fc235f51bdf8
+    #     registry: quay.io
+    #     repository: jetstack/cert-manager-cainjector
+    #     tag: v1.20.1
+    # image:
+    #   digest: sha256:9f9556b4b131554694c67c8229d231b1f7d69b882b5f061a56bafa465f3b22fc
+    #   registry: quay.io
+    #   repository: jetstack/cert-manager-controller
+    #   tag: v1.20.1
+    installCRDs: true
+    # webhook:
+    #   image:
+    #     digest: sha256:b876bcaf46ace2a5e860e8371539a6e1c8ccca54b1988a97c8a7483b3815d985
+    #     registry: quay.io
+    #     repository: jetstack/cert-manager-webhook
+    #     tag: v1.20.1

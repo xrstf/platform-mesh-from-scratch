@@ -1,0 +1,23 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  labels:
+    core.platform-mesh.io/operator-created: "true"
+  name: traefik-crds
+  namespace: platform-mesh-system
+spec:
+  chartRef:
+    kind: OCIRepository
+    name: traefik-crds
+    namespace: platform-mesh-system
+  dependsOn: []
+  install:
+    remediation:
+      retries: -1
+  interval: 1m
+  releaseName: traefik-crds
+  targetNamespace: default
+  timeout: 15m
+  upgrade:
+    remediation:
+      retries: 3
