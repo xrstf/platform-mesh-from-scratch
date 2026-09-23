@@ -189,7 +189,11 @@ clear_object_finalizers_by_ref() {
 cleanup_default_namespace() {
   log "Cleaning namespace/default"
 
-  mapfile -t resources < <(kubectl api-resources --verbs=list,delete --namespaced -o name | sort -u)
+  mapfile -t resources < <(
+    kubectl api-resources --verbs=list,delete --namespaced -o name \
+      | grep -v -E '^(events|events.events.k8s.io)$' \
+      | sort -u
+  )
 
   for resource in "${resources[@]}"; do
     local json
@@ -291,6 +295,48 @@ cleanup_crds() {
 
 log "Target cluster: $(kubectl config current-context)"
 log "This will remove non-standard workloads, namespaces, RBAC, webhooks, API services, and CRDs."
+
+kubectl -n platform-mesh-system delete etcds --all || true
+kubectl -n platform-mesh-system delete platformmeshes --all || true
+kubectl -n platform-mesh-system delete helmreleases --all || true
+kubectl -n platform-mesh-system delete ocirepositories --all || true
+
+kubectl delete crd backups.postgresql.cnpg.io || true
+kubectl delete crd clusterimagecatalogs.postgresql.cnpg.io || true
+kubectl delete crd clusters.postgresql.cnpg.io || true
+kubectl delete crd databases.postgresql.cnpg.io || true
+kubectl delete crd failoverquorums.postgresql.cnpg.io || true
+kubectl delete crd imagecatalogs.postgresql.cnpg.io || true
+kubectl delete crd poolers.postgresql.cnpg.io || true
+kubectl delete crd publications.postgresql.cnpg.io || true
+kubectl delete crd scheduledbackups.postgresql.cnpg.io || true
+kubectl delete crd subscriptions.postgresql.cnpg.io || true
+
+kubectl delete crd accesscontrolpolicies.hub.traefik.io || true
+kubectl delete crd aiservices.hub.traefik.io || true
+kubectl delete crd apiauths.hub.traefik.io || true
+kubectl delete crd apibundles.hub.traefik.io || true
+kubectl delete crd apicatalogitems.hub.traefik.io || true
+kubectl delete crd apiplans.hub.traefik.io || true
+kubectl delete crd apiportalauths.hub.traefik.io || true
+kubectl delete crd apiportals.hub.traefik.io || true
+kubectl delete crd apiratelimits.hub.traefik.io || true
+kubectl delete crd apis.hub.traefik.io || true
+kubectl delete crd apiversions.hub.traefik.io || true
+kubectl delete crd contentitems.hub.traefik.io || true
+kubectl delete crd ingressroutes.traefik.io || true
+kubectl delete crd ingressroutetcps.traefik.io || true
+kubectl delete crd ingressrouteudps.traefik.io || true
+kubectl delete crd managedapplications.hub.traefik.io || true
+kubectl delete crd managedsubscriptions.hub.traefik.io || true
+kubectl delete crd middlewares.traefik.io || true
+kubectl delete crd middlewaretcps.traefik.io || true
+kubectl delete crd serverstransports.traefik.io || true
+kubectl delete crd serverstransporttcps.traefik.io || true
+kubectl delete crd tlsoptions.traefik.io || true
+kubectl delete crd tlsstores.traefik.io || true
+kubectl delete crd traefikservices.traefik.io || true
+kubectl delete crd uplinks.hub.traefik.io || true
 
 cleanup_default_namespace
 cleanup_namespaces

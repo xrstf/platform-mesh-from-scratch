@@ -13,6 +13,7 @@ spec:
   dependsOn:
     - name: cert-manager
   install:
+    createNamespace: true
     remediation:
       retries: -1
   interval: 1m

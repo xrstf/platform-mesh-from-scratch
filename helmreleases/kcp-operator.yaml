@@ -11,6 +11,7 @@ spec:
     name: kcp-operator
     namespace: platform-mesh-system
   install:
+    createNamespace: true
     remediation:
       retries: -1
   interval: 1m

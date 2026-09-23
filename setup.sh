@@ -37,11 +37,15 @@ ensure_keycloak_admin_secret() {
   password="$(openssl rand -base64 32)"
   client_secret="$(openssl rand -base64 32)"
 
+  # TODO: We are re-using the password as the secret, only because the Deployment of the
+  # security-operator accidentally uses the wrong key in the volume. Until that is fixed,
+  # secret needs to identical be the password.
+
   kubectl create secret generic keycloak-admin \
     --namespace "$NAMESPACE" \
     --from-literal=username="keycloak-admin" \
     --from-literal=password="$password" \
-    --from-literal=secret="$client_secret"
+    --from-literal=secret="$password"
 
   info "Created secret keycloak-admin"
 }
@@ -160,10 +164,6 @@ install_flux() {
 }
 
 install_flux
-
-kubectl create namespace kcp-operator --dry-run=client -o yaml | kubectl apply -f -
-kubectl create namespace observability --dry-run=client -o yaml | kubectl apply -f -
-
 bootstrap_secrets
 
 # The PM operator needs these even when the deploy subroutine is disabled.
