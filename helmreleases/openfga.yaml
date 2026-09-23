@@ -38,10 +38,15 @@ spec:
       #     pullPolicy: Always
       #     repository: groundnuty/k8s-wait-for
       #     tag: v2.0
-      uri: postgres://postgres:openfga-password@openfga-postgres.platform-mesh-system.svc.cluster.local:5432/postgres?sslmode=disable
+      uri: postgres://postgres:$(OPENFGA_POSTGRES_PASSWORD)@openfga-postgres.platform-mesh-system.svc.cluster.local:5432/postgres?sslmode=disable
     extraEnvVars:
       - name: OPENFGA_EXPERIMENTALS
         value: enable-list-users
+      - name: OPENFGA_POSTGRES_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: openfga-postgres-credentials
+            key: password
     # image:
     #   repository: registry-1.docker.io/openfga/openfga
     #   tag: v1.14.0
@@ -55,7 +60,7 @@ spec:
       traffic.sidecar.istio.io/excludeInboundPorts: "2112"
     postgresql:
       auth:
-        password: openfga-password
+        existingSecret: openfga-postgres-credentials
       enabled: true
       image:
         digest: sha256:8082cd604a96fd00f5d2082614d6d863e3d67b4c0c4d835c39ae13defcce21e2

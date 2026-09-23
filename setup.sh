@@ -1,17 +1,148 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-cd $(dirname $0)
+cd "$(dirname "$0")"
 
-##############################################################
-# install Flux
+NAMESPACE="${NAMESPACE:-platform-mesh-system}"
 
-(
-  namespace=flux-system
+info() {
+  echo "[INFO] $*"
+}
+
+die() {
+  echo "[ERROR] $*" >&2
+  exit 1
+}
+
+command -v kubectl >/dev/null 2>&1 || die "kubectl not found"
+command -v openssl >/dev/null 2>&1 || die "openssl not found"
+command -v helm >/dev/null 2>&1 || die "helm not found"
+
+secret_exists() {
+  kubectl get secret "$1" -n "$NAMESPACE" >/dev/null 2>&1
+}
+
+secret_key() {
+  kubectl get secret "$1" -n "$NAMESPACE" -o jsonpath="{.data.$2}" | base64 -d
+}
+
+ensure_keycloak_admin_secret() {
+  if secret_exists keycloak-admin; then
+    info "Secret keycloak-admin already exists, skipping"
+    return
+  fi
+
+  local password
+  local client_secret
+  password="$(openssl rand -base64 32)"
+  client_secret="$(openssl rand -base64 32)"
+
+  kubectl create secret generic keycloak-admin \
+    --namespace "$NAMESPACE" \
+    --from-literal=username="keycloak-admin" \
+    --from-literal=password="$password" \
+    --from-literal=secret="$client_secret"
+
+  info "Created secret keycloak-admin"
+}
+
+ensure_keycloak_db_secrets() {
+  if secret_exists cnpg-keycloak-user && secret_exists keycloak-db-credentials; then
+    info "Secrets cnpg-keycloak-user and keycloak-db-credentials already exist, skipping"
+    return
+  fi
+
+  local username="keycloak"
+  local password
+
+  if secret_exists cnpg-keycloak-user; then
+    username="$(secret_key cnpg-keycloak-user username)"
+    password="$(secret_key cnpg-keycloak-user password)"
+  elif secret_exists keycloak-db-credentials; then
+    username="$(secret_key keycloak-db-credentials username)"
+    password="$(secret_key keycloak-db-credentials password)"
+  else
+    password="$(openssl rand -base64 32)"
+  fi
+
+  kubectl create secret generic cnpg-keycloak-user \
+    --namespace "$NAMESPACE" \
+    --from-literal=username="$username" \
+    --from-literal=password="$password"
+
+  kubectl create secret generic keycloak-db-credentials \
+    --namespace "$NAMESPACE" \
+    --from-literal=username="$username" \
+    --from-literal=password="$password"
+
+  info "Ensured secrets cnpg-keycloak-user and keycloak-db-credentials"
+}
+
+ensure_openfga_db_secrets() {
+  if secret_exists cnpg-openfga-user && secret_exists openfga-postgres-credentials; then
+    info "Secrets cnpg-openfga-user and openfga-postgres-credentials already exist, skipping"
+    return
+  fi
+
+  local username="openfga"
+  local password
+
+  if secret_exists cnpg-openfga-user; then
+    username="$(secret_key cnpg-openfga-user username)"
+    password="$(secret_key cnpg-openfga-user password)"
+  elif secret_exists openfga-postgres-credentials; then
+    password="$(secret_key openfga-postgres-credentials password)"
+  else
+    password="$(openssl rand -base64 32)"
+  fi
+
+  kubectl create secret generic cnpg-openfga-user \
+    --namespace "$NAMESPACE" \
+    --from-literal=username="$username" \
+    --from-literal=password="$password"
+
+  kubectl create secret generic openfga-postgres-credentials \
+    --namespace "$NAMESPACE" \
+    --from-literal=password="$password" \
+    --from-literal=postgres-password="$password"
+
+  info "Ensured secrets cnpg-openfga-user and openfga-postgres-credentials"
+}
+
+ensure_search_operator_secret() {
+  if secret_exists search-operator-opensearch; then
+    info "Secret search-operator-opensearch already exists, skipping"
+    return
+  fi
+
+  if [[ -n "${OPENSEARCH_URL:-}" && -n "${OPENSEARCH_USERNAME:-}" && -n "${OPENSEARCH_PASSWORD:-}" ]]; then
+    kubectl create secret generic search-operator-opensearch \
+      --namespace "$NAMESPACE" \
+      --from-literal=url="$OPENSEARCH_URL" \
+      --from-literal=username="$OPENSEARCH_USERNAME" \
+      --from-literal=password="$OPENSEARCH_PASSWORD"
+
+    info "Created secret search-operator-opensearch"
+  else
+    info "Skipping search-operator-opensearch secret (OPENSEARCH_URL/USERNAME/PASSWORD not set)"
+  fi
+}
+
+bootstrap_secrets() {
+  info "Creating namespace ${NAMESPACE} (idempotent)"
+  kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+  ensure_keycloak_admin_secret
+  ensure_keycloak_db_secrets
+  ensure_openfga_db_secrets
+  ensure_search_operator_secret
+}
+
+install_flux() {
+  local namespace=flux-system
 
   # Flux 2.18+ has issues with unknown fields that our templates emit. So we use 2.17.x.
   # This is still an issue with PM 0.5.2.
-
   helm upgrade \
     --install \
     --namespace "$namespace" --create-namespace \
@@ -23,100 +154,24 @@ cd $(dirname $0)
     --set sourceController.container.additionalArgs[0]="--requeue-dependency=5s" \
     flux oci://ghcr.io/fluxcd-community/charts/flux2
 
-  kubectl wait --namespace "$namespace" --for=condition=available deployment helm-controller
-  kubectl wait --namespace "$namespace" --for=condition=available deployment source-controller
-  kubectl wait --namespace "$namespace" --for=condition=available deployment kustomize-controller
-)
+  kubectl wait --namespace "$namespace" --for=condition=available deployment/helm-controller
+  kubectl wait --namespace "$namespace" --for=condition=available deployment/source-controller
+  kubectl wait --namespace "$namespace" --for=condition=available deployment/kustomize-controller
+}
 
-kubectl create ns platform-mesh-system || true
-kubectl create ns kcp-operator || true
+install_flux
 
-# this should be able to be done by the helm chart, if enabled
-kubectl create ns observability || true
+kubectl create namespace kcp-operator --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace observability --dry-run=client -o yaml | kubectl apply -f -
 
-# the PM operator needs these, even when the deploy subroutine is disabled
-kubectl apply -f ocmcrds
+bootstrap_secrets
 
-# install platform mesh
-kubectl apply -f ocirepositories
-kubectl apply -f helmreleases
+# The PM operator needs these even when the deploy subroutine is disabled.
+kubectl apply --filename ocmcrds
 
-# this can fail since we need to wait for CRDs to be installed.
-kubectl apply -f stuff
+# Install Platform Mesh.
+kubectl apply --filename ocirepositories
+kubectl apply --filename helmreleases
 
-
-###################################################################
-
-# TODO: is this needed? i never ran this, but the secrets still exist...
-###########################
-exit 0
-
-NAMESPACE=platform-mesh-system
-
-# Keycloak admin secret
-# The infra chart only renders keycloak-admin when keycloak.operator.admin.password is set.
-# In production, pre-create this secret here so the chart skips rendering it.
-if kubectl get secret keycloak-admin -n "${NAMESPACE}" >/dev/null 2>&1; then
-  info "Secret keycloak-admin already exists, skipping"
-else
-  KEYCLOAK_ADMIN_PASSWORD=$(openssl rand -base64 32)
-  KEYCLOAK_CLIENT_SECRET=$(openssl rand -base64 32)
-  kubectl create secret generic keycloak-admin \
-    -n "${NAMESPACE}" \
-    --from-literal=username="keycloak-admin" \
-    --from-literal=password="${KEYCLOAK_ADMIN_PASSWORD}" \
-    --from-literal=secret="${KEYCLOAK_CLIENT_SECRET}"
-  info "Created secret keycloak-admin"
-fi
-
-# Keycloak DB credentials (cnpg-keycloak-user + keycloak-db-credentials)
-# The infra chart only renders these when keycloak.operator.db.password is set.
-if kubectl get secret cnpg-keycloak-user -n "${NAMESPACE}" >/dev/null 2>&1; then
-  info "Secret cnpg-keycloak-user already exists, skipping"
-else
-  KEYCLOAK_DB_PASSWORD=$(openssl rand -base64 32)
-  kubectl create secret generic cnpg-keycloak-user \
-    -n "${NAMESPACE}" \
-    --from-literal=username="keycloak" \
-    --from-literal=password="${KEYCLOAK_DB_PASSWORD}"
-  kubectl create secret generic keycloak-db-credentials \
-    -n "${NAMESPACE}" \
-    --from-literal=username="keycloak" \
-    --from-literal=password="${KEYCLOAK_DB_PASSWORD}"
-  info "Created secrets cnpg-keycloak-user and keycloak-db-credentials"
-fi
-
-# OpenFGA DB credentials (cnpg-openfga-user + openfga-postgres-credentials)
-# The infra chart only renders cnpg-openfga-user when cnpg.roles.keycloak.password is set.
-if kubectl get secret cnpg-openfga-user -n "${NAMESPACE}" >/dev/null 2>&1; then
-  info "Secret cnpg-openfga-user already exists, skipping"
-else
-  OPENFGA_DB_PASSWORD=$(openssl rand -base64 32)
-  kubectl create secret generic cnpg-openfga-user \
-    -n "${NAMESPACE}" \
-    --from-literal=username="openfga" \
-    --from-literal=password="${OPENFGA_DB_PASSWORD}"
-  kubectl create secret generic openfga-postgres-credentials \
-    -n "${NAMESPACE}" \
-    --from-literal=password="${OPENFGA_DB_PASSWORD}" \
-    --from-literal=postgres-password="${OPENFGA_DB_PASSWORD}"
-  info "Created secrets cnpg-openfga-user and openfga-postgres-credentials"
-fi
-
-# OpenSearch credentials (used by search-operator via OPENSEARCH_URL / OPENSEARCH_USERNAME / OPENSEARCH_PASSWORD env vars)
-# These are not auto-generated — OpenSearch must be provisioned separately.
-# Set OPENSEARCH_URL, OPENSEARCH_USERNAME, OPENSEARCH_PASSWORD before running this script
-# or create the secret manually afterwards.
-if kubectl get secret search-operator-opensearch -n "${NAMESPACE}" >/dev/null 2>&1; then
-  info "Secret search-operator-opensearch already exists, skipping"
-elif [[ -n "${OPENSEARCH_URL:-}" && -n "${OPENSEARCH_USERNAME:-}" && -n "${OPENSEARCH_PASSWORD:-}" ]]; then
-  kubectl create secret generic search-operator-opensearch \
-    -n "${NAMESPACE}" \
-    --from-literal=url="${OPENSEARCH_URL}" \
-    --from-literal=username="${OPENSEARCH_USERNAME}" \
-    --from-literal=password="${OPENSEARCH_PASSWORD}"
-  info "Created secret search-operator-opensearch"
-else
-  info "Skipping search-operator-opensearch secret (OPENSEARCH_URL/USERNAME/PASSWORD not set)"
-  info "  Create it manually: kubectl create secret generic search-operator-opensearch -n ${NAMESPACE} --from-literal=url=<url> --from-literal=username=<user> --from-literal=password=<pass>"
-fi
+# This can fail on the first attempt while CRDs are still settling.
+kubectl apply --filename stuff || true

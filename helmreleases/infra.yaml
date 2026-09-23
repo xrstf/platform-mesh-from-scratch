@@ -36,9 +36,11 @@ spec:
       enabled: true
       roles:
         keycloak:
-          password: keycloak-password
+          username: keycloak
+          # password is supplied by the pre-created cnpg-keycloak-user secret (see setup.sh)
         openfga:
-          password: openfga-password
+          username: openfga
+          # password is supplied by the pre-created cnpg-openfga-user secret (see setup.sh)
     cors:
       enabled: true
     dex:
@@ -154,11 +156,12 @@ spec:
         # Keycloak is behind Traefik, which does TLS termination.
         httpEnabled: true
         admin:
-          password: admin
-          secret: admin
+          username: keycloak-admin
+          # password and secret are supplied by the pre-created keycloak-admin secret (see setup.sh)
         caSecret: domain-certificate-ca
         db:
-          password: keycloak-password
+          username: keycloak
+          # password is supplied by the pre-created keycloak-db-credentials secret (see setup.sh)
         enabled: true
         health:
           liveness:
