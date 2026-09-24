@@ -11,7 +11,7 @@ func TestImageMappings(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// every component that ships an image must have a mapping, otherwise mirrored
+	// every component that ships an image must have a mapping, otherwise transferred
 	// installations would silently pull from the original registry
 	for _, component := range []string{"account-operator", "cert-manager", "infra", "openfga", "traefik", "observability"} {
 		if len(mappings[component]) == 0 {

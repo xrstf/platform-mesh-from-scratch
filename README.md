@@ -35,7 +35,7 @@ This repository represents the absolute bare minimum that is required to get PM 
 You will have to perform some modifications to the manifests here before they can be
 applied to your cluster.
 
-The installation itself is rather simple:
+The manual installation itself is rather simple:
 
 * Prepare the manifests.
 * Install Flux into the cluster.
@@ -56,6 +56,26 @@ advanced templating offered by the Platform Mesh Operator.
 ### Step 1: Prepare Manifests
 
 To setup PM, you will need to customize the HelmReleases to your Kubernetes cluster.
+There are two ways to get the manifest necessary to install Platform Mesh.
+
+#### Using the installer
+
+In the `./installer` directory is a small helper that will allow you to generate the
+`HelmReleases` and `OCIRepositories` for your cluster. It will ask you some questions
+and then generate the manifests for you. You can supply your own Helm values totally
+separate from the generated files.
+
+This installer also has support for OCM to transfer the PM OCM Component into a different
+OCI registry, mirroring the entire component with all sub components, charts and images.
+This is helpful for airgapped environments. By using the installer you ensure that you
+not only mirror the data, but also generate the correct Helm values to make use of those
+mirrored charts/images.
+
+The remaining steps of the installation procedure stay exactly the same (installing
+Flux, setting up the Secrets etc.).
+
+#### Manual
+
 Use your favorite tool (for example `sed`) to perform mass search&replace operations
 and replace the following placeholders in all files in `helmreleases` and `manifests`:
 

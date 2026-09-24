@@ -22,7 +22,7 @@ func main() {
 		Commands: []*cli.Command{
 			cmd.StartCommand(),
 			cmd.DeployCommand(),
-			cmd.MirrorCommand(),
+			cmd.TransferCommand(),
 		},
 	}
 

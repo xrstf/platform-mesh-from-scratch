@@ -1,6 +1,6 @@
 # Mapping of OCM image resources to Helm values paths.
 #
-# When a Platform Mesh release is mirrored into another OCI registry, every image
+# When a Platform Mesh release is transferred into another OCI registry, every image
 # changes its location. The component descriptor knows the new location, so the installer
 # injects the resolved coordinates of each image into the Helm values of the chart that
 # needs it. This is the same mechanism the Platform Mesh Operator implements with its

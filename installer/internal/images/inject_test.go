@@ -134,14 +134,14 @@ image:
 }
 
 func TestInjectOverwritesUserCoordinates(t *testing.T) {
-	// a user (or a previous, non-mirrored setup) pointing at the original registry must
+	// a user (or a previous, untransferred setup) pointing at the original registry must
 	// not win over what OCM resolved
 	input := parse(t, "image:\n  registry: ghcr.io\n  repository: platform-mesh/portal\n  tag: v1.0.0\n")
 
 	values, _ := Inject(input, []Injection{{
 		Path:       []string{"image", "tag"},
 		Registry:   "registry.example.com",
-		Repository: "mirror/platform-mesh/portal",
+		Repository: "pm/platform-mesh/portal",
 		Tag:        "v1.2.3",
 		WithDigest: true,
 	}})
@@ -149,7 +149,7 @@ func TestInjectOverwritesUserCoordinates(t *testing.T) {
 	result := encode(t, values)
 
 	if strings.Contains(result, "ghcr.io") || strings.Contains(result, "v1.0.0") {
-		t.Fatalf("expected the mirrored location to win:\n%s", result)
+		t.Fatalf("expected the transferred location to win:\n%s", result)
 	}
 }
 

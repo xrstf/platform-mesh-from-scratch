@@ -15,23 +15,23 @@ import (
 	"go.platform-mesh.io/installer/internal/tui"
 )
 
-// MirrorCommand copies the entire Platform Mesh component tree into another OCI registry.
+// TransferCommand copies the entire Platform Mesh component tree into another OCI registry.
 //
 // NB: This command is a sketch. It performs a recursive, by-value transfer using the OCM
 // SDK, but has seen little testing and does not yet offer fine-grained control over
 // credentials (those are taken from the usual OCM/Docker configuration files).
-func MirrorCommand() *cli.Command {
+func TransferCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "mirror",
-		Usage: "mirror Platform Mesh into your own OCI registry (for airgapped installations)",
+		Name:  "transfer",
+		Usage: "transfer Platform Mesh into your own OCI registry (for airgapped installations)",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "version",
-				Usage: "Platform Mesh version to mirror (defaults to the latest released version)",
+				Usage: "Platform Mesh version to transfer (defaults to the latest released version)",
 			},
 			&cli.StringFlag{
 				Name:  "component",
-				Usage: "OCM component to mirror; either a component name or a full OCM reference",
+				Usage: "OCM component to transfer; either a component name or a full OCM reference",
 				Value: ocm.DefaultComponent,
 			},
 			&cli.StringFlag{
@@ -54,14 +54,14 @@ func MirrorCommand() *cli.Command {
 			},
 			&cli.BoolFlag{
 				Name:  "dry-run",
-				Usage: "only show what would be mirrored",
+				Usage: "only show what would be transferred",
 			},
 		},
-		Action: runMirror,
+		Action: runTransfer,
 	}
 }
 
-func runMirror(_ context.Context, cmd *cli.Command) error {
+func runTransfer(_ context.Context, cmd *cli.Command) error {
 	out := tui.NewPrompt()
 
 	client, err := ocm.NewClient(cmd.String("repository"), cmd.String("component"))
@@ -86,7 +86,7 @@ func runMirror(_ context.Context, cmd *cli.Command) error {
 
 	target := cmd.String("to")
 
-	out.Print("%s Mirroring %s:%s to %s …", tui.Cyan("→"), tui.Bold(client.Component()), tui.Bold(version), tui.Bold(target))
+	out.Print("%s Transferring %s:%s to %s …", tui.Cyan("→"), tui.Bold(client.Component()), tui.Bold(version), tui.Bold(target))
 
 	if cmd.Bool("dry-run") {
 		resolved, err := client.Components(version)
@@ -124,11 +124,11 @@ func runMirror(_ context.Context, cmd *cli.Command) error {
 	}
 
 	if err := transfer.Transfer(cv, targetRepo, options...); err != nil {
-		return fmt.Errorf("mirroring failed: %w", err)
+		return fmt.Errorf("transfer failed: %w", err)
 	}
 
 	out.Print("")
-	out.Print("  %s Everything was mirrored to %s.", tui.Green("✓"), target)
+	out.Print("  %s Everything was transferred to %s.", tui.Green("✓"), target)
 	out.Print("")
 	out.Print("  You can now generate manifests from your own registry:")
 	out.Print("")

@@ -349,7 +349,7 @@ func imageInjections(
 // unmappedImages reports images that exist in the component descriptor but are not
 // injected into any chart. After a Platform Mesh upgrade this points out new images that
 // the installer does not know about yet (and which would keep their original registry in
-// a mirrored setup).
+// a transferred setup).
 func unmappedImages(resolved []ocm.Component, isEnabled func(string) bool, used map[string]bool) []string {
 	unmapped := []string{}
 

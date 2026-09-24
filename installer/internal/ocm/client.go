@@ -144,7 +144,7 @@ func NewClient(repository, component string) (*Client, error) {
 }
 
 // NewClientForRegistry opens an OCM repository (without pinning a component), used as
-// mirror target. The registry can include a scheme; "http://" is preserved to allow
+// transfer target. The registry can include a scheme; "http://" is preserved to allow
 // pushing to plain-HTTP registries.
 func NewClientForRegistry(registry string) (ocmapi.Repository, error) {
 	ctx := ocmapi.DefaultContext()
@@ -251,7 +251,7 @@ func (c *Client) Components(version string) ([]Component, error) {
 }
 
 // LookupVersion returns the component version access for the given version, used by the
-// mirror command.
+// transfer command.
 func (c *Client) LookupVersion(version string) (ocmapi.ComponentVersionAccess, error) {
 	return c.repo.LookupComponentVersion(c.component, version)
 }

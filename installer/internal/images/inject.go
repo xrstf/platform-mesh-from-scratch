@@ -1,7 +1,7 @@
 // Package images injects the image coordinates resolved from OCM into Helm values.
 //
-// This is what makes mirrored installations work: after `installer mirror`, every image
-// lives in a different registry, and the charts must be told about it. The component
+// This is what makes transferred installations work: after `installer transfer`, every
+// image lives in a different registry, and the charts must be told about it. The component
 // descriptor is the source of truth for where an image lives, so the installer writes
 // those coordinates into the values of the chart that deploys the image.
 package images

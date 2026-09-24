@@ -8,7 +8,7 @@ The installer
   component descriptor,
 * combines them with *your* Helm values into Flux `HelmRelease` and `OCIRepository` objects,
 * helps you bootstrap your configuration interactively, and
-* can mirror an entire PM release into your own OCI registry (for airgapped setups).
+* can transfer an entire PM release into your own OCI registry (for airgapped setups).
 
 ## Design
 
@@ -137,8 +137,8 @@ coordinates into the Helm values of the chart that deploys them:
       digest: sha256:9f9556b4b131554694c67c8229d231b1f7d69b882b5f061a56bafa465f3b22fc
 ```
 
-This is what makes `mirror` useful: after mirroring into `registry.example.com/pm`, the very
-same command produces
+This is what makes `transfer` useful: after transferring into `registry.example.com/pm`, the
+very same command produces
 
 ```yaml
   values:
@@ -153,7 +153,7 @@ without you touching a single file. The injected values always win over what is 
 values file (a hand-written registry or a stale digest would break an airgapped install),
 but everything else you wrote – including comments – is left alone.
 
-Which image goes where is described in `internal/components/images.yaml`, mirroring the
+Which image goes where is described in `internal/components/images.yaml`, and mirrors the
 `imageResources` configuration of the Platform Mesh Operator. Per image you can configure:
 
 | Key | Default | Description |
@@ -169,7 +169,7 @@ warning at the end of a `deploy` run – after a Platform Mesh upgrade this imme
 which new images still need a mapping. Use `--show-images` to see every injection and
 `--images=false` to turn the mechanism off entirely.
 
-### `installer mirror`
+### `installer transfer`
 
 > [!NOTE]
 > This command is a sketch: it works, but has seen little testing and does not offer
@@ -177,7 +177,7 @@ which new images still need a mapping. Use `--show-images` to see every injectio
 > configuration).
 
 ```bash
-installer mirror --to registry.example.com/platform-mesh
+installer transfer --to registry.example.com/platform-mesh
 ```
 
 It performs a recursive, by-value transfer of the component tree (including all Helm charts
@@ -198,3 +198,17 @@ namespace, dependencies between components and whether a component is part of a 
 installation at all. This is not part of the component descriptor, so the installer ships
 these defaults in `internal/components/components.yaml`. Components that are unknown to the
 installer are deployed into the release namespace without dependencies.
+
+## Project layout
+
+```
+internal/cmd/          CLI commands (start, deploy, transfer)
+internal/ocm/          OCM SDK wrapper: version resolution, chart and image discovery
+internal/components/   built-in metadata (namespaces, dependencies, image mappings)
+internal/values/       loading of user Helm values (file or directory)
+internal/images/       injection of resolved image locations into Helm values
+internal/yamlutil/     comment-preserving YAML node manipulation
+internal/generate/     manifest generation (Flux HelmRelease + OCIRepository)
+internal/starter/      templates and rendering for `start`
+internal/tui/          the modest interactive bits
+```
