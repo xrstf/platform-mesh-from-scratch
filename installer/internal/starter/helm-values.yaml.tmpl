@@ -1,0 +1,499 @@
+# Platform Mesh Helm values
+#
+# Each top-level key corresponds to a Platform Mesh component (Helm chart). The values
+# below are merged into the generated HelmReleases by `installer deploy`.
+# This file is yours: edit it, add comments, check it into git.
+
+account-operator:
+  # TODO: This controls the account-operator-crds dependencies, which
+  # has resources like APIExports and APIResourceSchemas that belong *inside*
+  # kcp. Installing these on the hosting cluster never makes sense.
+  # The PM Operator is the component that bootstraps in-kcp stuff.
+  # Arguably this flag should default to false or be removed entirely.
+  crds:
+    enabled: false
+  # Mostly performance improvements for routing traffic. Should be able
+  # to skip configuring this.
+  hostAliases:
+    enabled: true
+    entries:
+      - ip: {{ .TraefikIP }}
+        hostnames:
+          - {{ .BaseDomain }}
+          - kcp.api.{{ .BaseDomain }}
+          - root.kcp.{{ .BaseDomain }}
+          - triton.kcp.{{ .BaseDomain }}
+  # TODO: Created by the PM Operator later. Arguably should not need to be configured here.
+  # Move this to the default value in the Helm chart?
+  kubeconfigSecret: account-operator-kubeconfig
+
+cert-manager:
+  installCRDs: true
+
+extension-manager-operator:
+  # TODO: This controls the extension-manager-operator-crds dependencies, which
+  # has resources like APIExports and APIResourceSchemas that belong *inside*
+  # kcp. Installing these on the hosting cluster never makes sense.
+  # The PM Operator is the component that bootstraps in-kcp stuff.
+  # Arguably this flag should default to false or be removed entirely.
+  crds:
+    enabled: false
+  # Mostly performance improvements for routing traffic. Should be able
+  # to skip configuring this.
+  hostAliases:
+    enabled: true
+    entries:
+      - ip: {{ .TraefikIP }}
+        hostnames:
+          - {{ .BaseDomain }}
+          - kcp.api.{{ .BaseDomain }}
+          - root.kcp.{{ .BaseDomain }}
+          - triton.kcp.{{ .BaseDomain }}
+
+iam-service:
+  caSecret: domain-certificate-ca
+  exposure:
+    hostnames:
+      - {{ .BaseDomain }}
+      - '*.{{ .BaseDomain }}'
+  # Mostly performance improvements for routing traffic. Should be able
+  # to skip configuring this.
+  hostAliases:
+    enabled: true
+    entries:
+      - ip: {{ .TraefikIP }}
+        hostnames:
+          - {{ .BaseDomain }}
+          - kcp.api.{{ .BaseDomain }}
+          - root.kcp.{{ .BaseDomain }}
+          - triton.kcp.{{ .BaseDomain }}
+  keycloak:
+    baseUrl: https://{{ .BaseDomain }}:8443/keycloak
+
+iam-ui:
+  exposure:
+    hostnames:
+      - {{ .BaseDomain }}
+      - '*.{{ .BaseDomain }}'
+
+infra:
+  cnpg:
+    enabled: true
+  dex:
+    enabled: true
+    gatewayApi:
+      hostnames:
+        - {{ .BaseDomain }}
+    issuer: https://{{ .BaseDomain }}:8443/dex
+    staticClient:
+      redirectURIs:
+        - https://{{ .BaseDomain }}:8443/keycloak/realms/default/broker/dex/endpoint
+  gatewayApi:
+    infrastructure:
+      annotations:
+        dns.gardener.cloud/class: garden
+    listeners:
+      - name: terminate
+        hostname: {{ .BaseDomain }}
+        port: 8443
+        protocol: HTTPS
+        tls:
+          mode: Terminate
+          certificateRefs:
+            - kind: Secret
+              name: domain-certificate
+              namespace: platform-mesh-system
+      - name: terminate-wildstar
+        hostname: "*.{{ .BaseDomain }}"
+        port: 8443
+        protocol: HTTPS
+        tls:
+          mode: Terminate
+          certificateRefs:
+            - kind: Secret
+              name: domain-certificate
+              namespace: platform-mesh-system
+      - name: passthrough
+        port: 8443
+        protocol: TLS
+        tls:
+          mode: Passthrough
+        allowedRoutes:
+          namespaces:
+            from: All
+    listenersExtra:
+      - name: terminate-services
+        hostname: "*.services.{{ .BaseDomain }}"
+        port: 8443
+        protocol: HTTPS
+        tls:
+          mode: Terminate
+          certificateRefs:
+            - kind: Secret
+              name: domain-certificate
+              namespace: platform-mesh-system
+        allowedRoutes:
+          namespaces:
+            from: All
+  hostAliases:
+    enabled: true
+    entries:
+      - ip: {{ .TraefikIP }}
+        hostnames:
+          - {{ .BaseDomain }}
+          - kcp.api.{{ .BaseDomain }}
+          - root.kcp.{{ .BaseDomain }}
+          - triton.kcp.{{ .BaseDomain }}
+  kcp:
+    external:
+      hostname: kcp.api.{{ .BaseDomain }}
+    frontProxy:
+      clusterIP: {{ .FrontProxyIP }}
+    rootShard:
+      hostname: root.kcp.{{ .BaseDomain }}
+      shardBaseURL: https://root.kcp.{{ .BaseDomain }}:8443/
+    shards:
+      - hostname: triton.kcp.{{ .BaseDomain }}
+        name: triton
+  keycloak:
+    gatewayApi:
+      hostnames:
+        - {{ .BaseDomain }}
+    keycloakConfig:
+      redirectUrls:
+        - https://{{ .BaseDomain }}:8443/callback*
+      # TODO: Default uses a URL without port and using "keycloak" as the service name, not
+      # keycloak-service. We override that name further down in this file. Why? Could we not
+      # use the default from the Helm chart in both places?
+      url: http://keycloak-service.platform-mesh-system.svc.cluster.local:8080/keycloak
+    operator:
+      enabled: true
+      # Keycloak is behind Traefik, which does TLS termination.
+      # TODO: Should the default values already set this to true?
+      httpEnabled: true
+      admin:
+        username: keycloak-admin
+        # password and secret are supplied by the pre-created keycloak-admin secret (see setup.sh)
+      caSecret: domain-certificate-ca
+      hostname: https://{{ .BaseDomain }}:8443/keycloak/
+    service:
+      name: keycloak-service
+      port: 8080
+  # TODO: Why does PM seemingly work without these?
+  # traefik:
+  #   accessControlAllowOriginList:
+  #     - http://localhost:4200
+  #     - http://localhost:4300
+  #     - http://*.localhost:4200
+  #     - http://*.localhost:4300
+  #     - http://sub.localhost:4300
+  #     - https://{{ .BaseDomain }}:8443
+  #     - https://*.{{ .BaseDomain }}:8443
+
+init-agent:
+  kcpKubeconfig: init-agent-kubeconfig
+  configWorkspace: root:platform-mesh-system
+  hostAliases:
+    enabled: true
+    values:
+      - ip: {{ .TraefikIP }}
+        hostnames:
+          - {{ .BaseDomain }}
+          - kcp.api.{{ .BaseDomain }}
+          - root.kcp.{{ .BaseDomain }}
+          - triton.kcp.{{ .BaseDomain }}
+
+kubernetes-graphql-gateway:
+  gatewayApi:
+    httpRoute:
+      hostnames:
+        - {{ .BaseDomain }}
+        - '*.{{ .BaseDomain }}'
+  hostAliases:
+    enabled: true
+    entries:
+      - ip: {{ .TraefikIP }}
+        hostnames:
+          - {{ .BaseDomain }}
+          - kcp.api.{{ .BaseDomain }}
+          - root.kcp.{{ .BaseDomain }}
+          - triton.kcp.{{ .BaseDomain }}
+  kubeConfig:
+    secretName: kubernetes-graphql-gateway-kubeconfig
+  listener:
+    # TODO: Where and how? This is nowhere in our Helm charts.
+    virtualWorkspacesConfig:
+      content:
+        virtualWorkspaces:
+          - kubeconfig: /app/kubeconfig/kubeconfig
+            name: contentconfigurations
+            url: https://frontproxy-front-proxy.platform-mesh-system:8443/services/contentconfigurations
+          - kubeconfig: /app/kubeconfig/kubeconfig
+            name: marketplace
+            url: https://frontproxy-front-proxy.platform-mesh-system:8443/services/marketplace
+      enabled: true
+  trust:
+    default:
+      audience: default
+      jwksUrl: http://keycloak-headless.platform-mesh-system:8080/keycloak/realms/default/protocol/openid-connect/certs
+      trustedIssuer: https://{{ .BaseDomain }}:8443/keycloak/realms/default
+
+marketplace-ui:
+  contentConfig:
+    baseDomain: {{ .BaseDomain }}
+    protocol: https
+  exposure:
+    hostnames:
+      - {{ .BaseDomain }}
+      - '*.{{ .BaseDomain }}'
+  gatewayApi:
+    enabled: true
+  http:
+    protocol: https
+
+observability:
+  prometheus:
+    # TODO: All of these are disabled by default because observability once
+    # was only a POC. We should revisit that and maybe enable them by default?
+    alertmanager:
+      enabled: true
+    server:
+      persistentVolume:
+        enabled: true
+
+openfga:
+  checkQueryCache:
+    enabled: true
+    limit: 10000
+    ttl: 10s
+  datastore:
+    engine: postgres
+    maxOpenConns: 30
+    migrationType: initContainer
+    existingSecret: openfga-datastore-secret
+    secretKeys:
+      usernameKey: username
+      passwordKey: password
+  extraEnvVars:
+    - name: OPENFGA_EXPERIMENTALS
+      value: enable-list-users
+    # TODO: This should/can be predefined in the Helm chart now, since it is separated from the credentials.
+    - name: OPENFGA_DATASTORE_URI
+      value: postgres://platform-mesh-pg-rw.platform-mesh-system.svc.cluster.local:5432/openfga?sslmode=disable
+  migrate:
+    annotations:
+      sidecar.istio.io/inject: "false"
+  podAnnotations:
+    traffic.sidecar.istio.io/excludeInboundPorts: "2112"
+  replicaCount: 1
+  telemetry:
+    trace:
+      enabled: true
+      otlp:
+        endpoint: observability-opentelemetry-collector.openmfp-observability.svc.cluster.local:4317
+        tls:
+          enabled: false
+
+opentelemetry-operator:
+  admissionWebhooks:
+    autoGenerateCert:
+      enabled: true
+    certManager:
+      enabled: false
+  manager:
+    featureGatesMap:
+      operator.targetallocator.mtls: true
+
+platform-mesh-operator:
+  extraArgs:
+    - --kcp-front-proxy-port=8443
+    - --kcp-url=https://frontproxy-front-proxy.platform-mesh-system:8443
+    - --subroutines-feature-toggles-enabled=true
+    - --idp-welcome-additional-redirect-uris=https://{{ .BaseDomain }}:8443/callback*
+    - --idp-welcome-additional-post-logout-redirect-uris=https://{{ .BaseDomain }}:8443/logout*
+    # make sure the PM operator does not attempt to manage HelmReleases
+    - --subroutines-managed-provider-deploy-enabled=false
+    - --subroutines-deployment-enabled=false
+  extraVolumeMounts:
+    - mountPath: /etc/platformmesh
+      name: external-platformmesh-deployment
+      readOnly: true
+  extraVolumes:
+    - name: external-platformmesh-deployment
+      secret:
+        defaultMode: 420
+        optional: true
+        secretName: platform-mesh-kubeconfig
+  hostAliases:
+    enabled: true
+    entries:
+      - ip: {{ .TraefikIP }}
+        hostnames:
+          - {{ .BaseDomain }}
+          - kcp.api.{{ .BaseDomain }}
+          - root.kcp.{{ .BaseDomain }}
+          - triton.kcp.{{ .BaseDomain }}
+  idp:
+    registrationAllowed: true
+
+portal:
+  auth:
+    default:
+      baseDomain: {{ .BaseDomain }}
+      clientId: welcome
+      clientSecretKey: attribute.client_secret
+      clientSecretName: portal-client-secret-welcome
+      discoveryUrl: https://{{ .BaseDomain }}:8443/keycloak/realms/${org-name}/.well-known/openid-configuration
+  cookieDomain: {{ .BaseDomain }}
+  crdGatewayApiUrl: https://${org-subdomain}{{ .BaseDomain }}/api/kubernetes-graphql-gateway/root:orgs:${org-name}/graphql
+  environment: production
+  extraEnvVars:
+    - name: OPENMFP_PORTAL_CONTEXT_IAM_SERVICE_API_URL
+      value: https://${org-subdomain}{{ .BaseDomain }}:8443/iam/graphql
+    - name: OPENMFP_PORTAL_CONTEXT_CRD_GATEWAY_API_URL
+      value: https://${org-subdomain}{{ .BaseDomain }}:8443/gateway/api/clusters/root:orgs:${org-name}/graphql
+    - name: NODE_EXTRA_CA_CERTS
+      value: /etc/ssl/certs/ca-bundle.crt
+    - name: OPENMFP_PORTAL_CONTEXT_AUTHZ_WEBHOOK_URL
+      value: https://rebac-authz-webhook.platform-mesh-system.svc.cluster.local:9443
+  extraVolumeMounts:
+    - mountPath: /etc/ssl/certs/ca-bundle.crt
+      name: combined-ca
+      readOnly: true
+      subPath: ca-bundle.crt
+  extraVolumes:
+    - name: domain-ca
+      secret:
+        secretName: domain-certificate-ca
+    - name: webhook-ca
+      secret:
+        secretName: rebac-authz-webhook-cert
+    - emptyDir: {}
+      name: combined-ca
+  frontendPort: "8443"
+  gatewayApi:
+    httpRoute:
+      hostnames:
+        - {{ .BaseDomain }}
+        - '*.{{ .BaseDomain }}'
+      parentRefs:
+        - kind: Gateway
+          name: k8sapi-gateway
+  hostAliases:
+    enabled: true
+    entries:
+      - ip: {{ .TraefikIP }}
+        hostnames:
+          - {{ .BaseDomain }}
+          - kcp.api.{{ .BaseDomain }}
+          - root.kcp.{{ .BaseDomain }}
+          - triton.kcp.{{ .BaseDomain }}
+  http:
+    protocol: https
+  initContainers:
+    - command:
+        - sh
+        - -c
+        - cat /domain-ca/tls.crt /webhook-ca/ca.crt > /combined-ca/ca-bundle.crt
+      image: busybox:1.36
+      name: combine-ca
+      securityContext:
+        runAsUser: 1000
+      volumeMounts:
+        - mountPath: /domain-ca
+          name: domain-ca
+          readOnly: true
+        - mountPath: /webhook-ca
+          name: webhook-ca
+          readOnly: true
+        - mountPath: /combined-ca
+          name: combined-ca
+  kcp:
+    kubeconfigSecret: portal-kubeconfig
+
+rebac-authz-webhook:
+  certManager:
+    createCA: true
+  certificates:
+    create: true
+  istio:
+    # TODO: Has nothing to do with Istio at all, but the cert template in the chart simply
+    # uses this field. The cert will also have a wonky IP embedded that we do not care about.
+    # Todo is to cleanup the chart a bit and do not use an istio field for a cert that is
+    # used without istio.
+    dnsNames: [rebac-authz-webhook.platform-mesh-system.svc.cluster.local]
+  hostAliases:
+    enabled: true
+    entries:
+      - ip: {{ .TraefikIP }}
+        hostnames:
+          - {{ .BaseDomain }}
+          - kcp.api.{{ .BaseDomain }}
+          - root.kcp.{{ .BaseDomain }}
+          - triton.kcp.{{ .BaseDomain }}
+
+security-operator:
+  baseDomain: {{ .BaseDomain }}:8443
+  caSecret: domain-certificate-ca
+  idp:
+    smtp:
+      server: ""
+      port: ""
+      fromAddress: ""
+    additionalRedirectUrls:
+      - https://{{ .BaseDomain }}:8443/callback*
+    registrationAllowed: true
+    allowUnverifiedEmails: true
+    setDefaultPassword: false
+  keycloak:
+    baseUrl: https://{{ .BaseDomain }}:8443/keycloak
+  hostAliases:
+    enabled: true
+    entries:
+      - ip: {{ .TraefikIP }}
+        hostnames:
+          - {{ .BaseDomain }}
+          - kcp.api.{{ .BaseDomain }}
+          - root.kcp.{{ .BaseDomain }}
+          - triton.kcp.{{ .BaseDomain }}
+  kubeconfigSecret: security-operator-kubeconfig
+
+traefik:
+  experimental:
+    kubernetesGateway:
+      enabled: true
+  gateway:
+    enabled: false
+  gatewayClass:
+    enabled: true
+  ports:
+    websecure:
+      exposedPort: 8443
+      nodePort: 31000
+  providers:
+    kubernetesGateway:
+      enabled: true
+      experimentalChannel: true
+  service:
+    annotations:
+      dns.gardener.cloud/class: garden
+      dns.gardener.cloud/dnsnames: >-
+        {{ .BaseDomain }},
+        *.{{ .BaseDomain }},
+        *.services.{{ .BaseDomain }},
+        kcp.api.{{ .BaseDomain }},
+        root.kcp.{{ .BaseDomain }},
+        triton.kcp.{{ .BaseDomain }}
+    spec:
+      clusterIP: {{ .TraefikIP }}
+
+virtual-workspaces:
+  hostAliases:
+    enabled: true
+    entries:
+      - ip: {{ .TraefikIP }}
+        hostnames:
+          - {{ .BaseDomain }}
+          - kcp.api.{{ .BaseDomain }}
+          - root.kcp.{{ .BaseDomain }}
+          - triton.kcp.{{ .BaseDomain }}

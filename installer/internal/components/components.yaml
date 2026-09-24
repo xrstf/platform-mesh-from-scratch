@@ -1,0 +1,106 @@
+# Default deployment metadata for the known Platform Mesh components.
+#
+# This is *not* Helm values, but describes how a component is deployed: whether it is part
+# of a default installation, in which namespace its chart is installed and which other
+# components have to be ready first.
+#
+# Components that are not listed here are deployed into the default release namespace
+# without any dependencies (see "unknownComponentsEnabled" in the deploy command).
+
+components:
+  account-operator:
+    targetNamespace: platform-mesh-system
+
+  cert-manager:
+    targetNamespace: default
+
+  cnpg-operator:
+    targetNamespace: platform-mesh-system
+
+  etcd-druid:
+    targetNamespace: etcd-druid-system
+
+  example-httpbin-operator:
+    enabled: false
+
+  extension-manager-operator:
+    targetNamespace: platform-mesh-system
+
+  gateway-api-crds:
+    targetNamespace: default
+
+  iam-service:
+    targetNamespace: platform-mesh-system
+
+  iam-ui:
+    targetNamespace: platform-mesh-system
+
+  infra:
+    targetNamespace: platform-mesh-system
+    dependsOn:
+      - keycloak-operator
+      - cnpg-operator
+
+  init-agent:
+    targetNamespace: platform-mesh-system
+
+  kcp-operator:
+    targetNamespace: kcp-operator
+
+  keycloak-operator:
+    targetNamespace: platform-mesh-system
+
+  kro-composition-operator:
+    enabled: false
+
+  kube-prometheus-stack:
+    enabled: false
+
+  kubernetes-graphql-gateway:
+    targetNamespace: platform-mesh-system
+
+  marketplace-ui:
+    targetNamespace: platform-mesh-system
+
+  observability:
+    targetNamespace: observability
+    dependsOn:
+      - prometheus-operator-crds
+      - opentelemetry-operator
+
+  openfga:
+    targetNamespace: platform-mesh-system
+
+  opentelemetry-operator:
+    targetNamespace: observability
+    dependsOn:
+      - cert-manager
+
+  platform-mesh-operator:
+    targetNamespace: platform-mesh-system
+
+  portal:
+    targetNamespace: platform-mesh-system
+
+  prometheus-operator-crds:
+    targetNamespace: observability
+
+  rebac-authz-webhook:
+    targetNamespace: platform-mesh-system
+
+  security-operator:
+    targetNamespace: platform-mesh-system
+
+  terminal-controller-manager:
+    enabled: false
+
+  traefik:
+    targetNamespace: default
+    dependsOn:
+      - traefik-crds
+
+  traefik-crds:
+    targetNamespace: default
+
+  virtual-workspaces:
+    targetNamespace: platform-mesh-system
