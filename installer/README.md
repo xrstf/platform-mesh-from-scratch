@@ -17,8 +17,6 @@ files that you own, edit and check into git. The installer only ever *generates*
 from them, so upgrading Platform Mesh is a matter of re-running `deploy` with a new version;
 your values file stays untouched and your git history stays clean.
 
-Comments and key ordering in your values files are preserved in the generated manifests.
-
 ## Installation
 
 ```bash
@@ -118,6 +116,9 @@ Two styles are supported:
 * **A directory**, with one file per component (`account-operator.yaml`, `openfga.yaml`, …),
   each containing just the values for that chart. Handy if you have a lot of customizations.
 
+You can switch between single file and a full directory at any time, it's really up to you
+how you want to maintain your configuration.
+
 Values for components that do not exist in the chosen PM version are reported as a warning,
 which usually means a typo.
 
@@ -197,17 +198,3 @@ namespace, dependencies between components and whether a component is part of a 
 installation at all. This is not part of the component descriptor, so the installer ships
 these defaults in `internal/components/components.yaml`. Components that are unknown to the
 installer are deployed into the release namespace without dependencies.
-
-## Project layout
-
-```
-internal/cmd/          CLI commands (start, deploy, mirror)
-internal/ocm/          OCM SDK wrapper: version resolution, chart and image discovery
-internal/components/   built-in metadata (namespaces, dependencies, image mappings)
-internal/values/       loading of user Helm values (file or directory)
-internal/images/       injection of resolved image locations into Helm values
-internal/yamlutil/     comment-preserving YAML node manipulation
-internal/generate/     manifest generation (Flux HelmRelease + OCIRepository)
-internal/starter/      templates and rendering for `start`
-internal/tui/          the modest interactive bits
-```

@@ -5,15 +5,9 @@
 # This file is yours: edit it, add comments, check it into git.
 
 account-operator:
-  # TODO: This controls the account-operator-crds dependencies, which
-  # has resources like APIExports and APIResourceSchemas that belong *inside*
-  # kcp. Installing these on the hosting cluster never makes sense.
-  # The PM Operator is the component that bootstraps in-kcp stuff.
-  # Arguably this flag should default to false or be removed entirely.
+  kubeconfigSecret: account-operator-kubeconfig
   crds:
     enabled: false
-  # Mostly performance improvements for routing traffic. Should be able
-  # to skip configuring this.
   hostAliases:
     enabled: true
     entries:
@@ -23,23 +17,13 @@ account-operator:
           - kcp.api.{{ .BaseDomain }}
           - root.kcp.{{ .BaseDomain }}
           - triton.kcp.{{ .BaseDomain }}
-  # TODO: Created by the PM Operator later. Arguably should not need to be configured here.
-  # Move this to the default value in the Helm chart?
-  kubeconfigSecret: account-operator-kubeconfig
 
 cert-manager:
   installCRDs: true
 
 extension-manager-operator:
-  # TODO: This controls the extension-manager-operator-crds dependencies, which
-  # has resources like APIExports and APIResourceSchemas that belong *inside*
-  # kcp. Installing these on the hosting cluster never makes sense.
-  # The PM Operator is the component that bootstraps in-kcp stuff.
-  # Arguably this flag should default to false or be removed entirely.
   crds:
     enabled: false
-  # Mostly performance improvements for routing traffic. Should be able
-  # to skip configuring this.
   hostAliases:
     enabled: true
     entries:
@@ -56,8 +40,6 @@ iam-service:
     hostnames:
       - {{ .BaseDomain }}
       - '*.{{ .BaseDomain }}'
-  # Mostly performance improvements for routing traffic. Should be able
-  # to skip configuring this.
   hostAliases:
     enabled: true
     entries:
@@ -162,33 +144,17 @@ infra:
     keycloakConfig:
       redirectUrls:
         - https://{{ .BaseDomain }}:8443/callback*
-      # TODO: Default uses a URL without port and using "keycloak" as the service name, not
-      # keycloak-service. We override that name further down in this file. Why? Could we not
-      # use the default from the Helm chart in both places?
       url: http://keycloak-service.platform-mesh-system.svc.cluster.local:8080/keycloak
     operator:
       enabled: true
-      # Keycloak is behind Traefik, which does TLS termination.
-      # TODO: Should the default values already set this to true?
       httpEnabled: true
       admin:
         username: keycloak-admin
-        # password and secret are supplied by the pre-created keycloak-admin secret (see setup.sh)
       caSecret: domain-certificate-ca
       hostname: https://{{ .BaseDomain }}:8443/keycloak/
     service:
       name: keycloak-service
       port: 8080
-  # TODO: Why does PM seemingly work without these?
-  # traefik:
-  #   accessControlAllowOriginList:
-  #     - http://localhost:4200
-  #     - http://localhost:4300
-  #     - http://*.localhost:4200
-  #     - http://*.localhost:4300
-  #     - http://sub.localhost:4300
-  #     - https://{{ .BaseDomain }}:8443
-  #     - https://*.{{ .BaseDomain }}:8443
 
 init-agent:
   kcpKubeconfig: init-agent-kubeconfig
@@ -221,7 +187,6 @@ kubernetes-graphql-gateway:
   kubeConfig:
     secretName: kubernetes-graphql-gateway-kubeconfig
   listener:
-    # TODO: Where and how? This is nowhere in our Helm charts.
     virtualWorkspacesConfig:
       content:
         virtualWorkspaces:
@@ -253,8 +218,6 @@ marketplace-ui:
 
 observability:
   prometheus:
-    # TODO: All of these are disabled by default because observability once
-    # was only a POC. We should revisit that and maybe enable them by default?
     alertmanager:
       enabled: true
     server:
@@ -277,7 +240,6 @@ openfga:
   extraEnvVars:
     - name: OPENFGA_EXPERIMENTALS
       value: enable-list-users
-    # TODO: This should/can be predefined in the Helm chart now, since it is separated from the credentials.
     - name: OPENFGA_DATASTORE_URI
       value: postgres://platform-mesh-pg-rw.platform-mesh-system.svc.cluster.local:5432/openfga?sslmode=disable
   migrate:
@@ -417,10 +379,6 @@ rebac-authz-webhook:
   certificates:
     create: true
   istio:
-    # TODO: Has nothing to do with Istio at all, but the cert template in the chart simply
-    # uses this field. The cert will also have a wonky IP embedded that we do not care about.
-    # Todo is to cleanup the chart a bit and do not use an istio field for a cert that is
-    # used without istio.
     dnsNames: [rebac-authz-webhook.platform-mesh-system.svc.cluster.local]
   hostAliases:
     enabled: true
