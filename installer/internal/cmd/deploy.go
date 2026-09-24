@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"sort"
 	"strings"
 
 	"github.com/urfave/cli/v3"
 
 	"go.platform-mesh.io/installer/internal/components"
 	"go.platform-mesh.io/installer/internal/generate"
+	"go.platform-mesh.io/installer/internal/images"
 	"go.platform-mesh.io/installer/internal/ocm"
 	"go.platform-mesh.io/installer/internal/tui"
 	"go.platform-mesh.io/installer/internal/values"
@@ -70,6 +72,15 @@ func DeployCommand() *cli.Command {
 				Value: true,
 			},
 			&cli.BoolFlag{
+				Name:  "images",
+				Usage: "inject the image locations resolved from OCM into the Helm values",
+				Value: true,
+			},
+			&cli.BoolFlag{
+				Name:  "show-images",
+				Usage: "list every injected image",
+			},
+			&cli.BoolFlag{
 				Name:  "prereleases",
 				Usage: "consider prerelease versions when determining the latest version",
 			},
@@ -127,6 +138,20 @@ func runDeploy(_ context.Context, cmd *cli.Command) error {
 		return err
 	}
 
+	imageMappings, err := components.ImageMappings()
+	if err != nil {
+		return err
+	}
+
+	if !cmd.Bool("images") {
+		imageMappings = nil
+	}
+
+	byName := map[string]ocm.Component{}
+	for _, component := range resolved {
+		byName[component.Name] = component
+	}
+
 	enabled := cmd.StringSlice("enable")
 	disabled := cmd.StringSlice("disable")
 	namespace := cmd.String("namespace")
@@ -146,6 +171,9 @@ func runDeploy(_ context.Context, cmd *cli.Command) error {
 	releases := []generate.Release{}
 	skipped := []string{}
 	usedValues := map[string]bool{}
+	usedImages := map[string]bool{}
+	warnings := []string{}
+	injected := map[string][]images.Injection{}
 
 	for _, component := range resolved {
 		if !isEnabled(component.Name) {
@@ -172,6 +200,14 @@ func runDeploy(_ context.Context, cmd *cli.Command) error {
 
 			usedValues[chart.Name] = true
 
+			injections, injectionWarnings := imageInjections(component, byName, imageMappings[chart.Name], usedImages)
+			warnings = append(warnings, injectionWarnings...)
+
+			chartValues, applyWarnings := images.Inject(userValues.For(chart.Name), injections)
+			warnings = append(warnings, applyWarnings...)
+
+			injected[chart.Name] = injections
+
 			releases = append(releases, generate.Release{
 				Name:            chart.Name,
 				Component:       component.ComponentName,
@@ -181,7 +217,7 @@ func runDeploy(_ context.Context, cmd *cli.Command) error {
 				Namespace:       namespace,
 				TargetNamespace: targetNamespace,
 				DependsOn:       chartConfig.DependsOn,
-				Values:          userValues.For(chart.Name),
+				Values:          chartValues,
 			})
 		}
 	}
@@ -207,13 +243,20 @@ func runDeploy(_ context.Context, cmd *cli.Command) error {
 	}
 
 	out.Print("")
+
 	for _, release := range releases {
 		suffix := ""
-		if userValues.For(release.Name) == nil {
-			suffix = tui.Dim(" (no custom values)")
+		if count := len(injected[release.Name]); count > 0 {
+			suffix = tui.Dim(fmt.Sprintf(" +%d image(s)", count))
 		}
 
 		out.Print("  %s %-30s %s%s", tui.Green("✓"), release.Name, tui.Dim(release.ChartURL+":"+release.ChartVersion), suffix)
+
+		if cmd.Bool("show-images") {
+			for _, injection := range injected[release.Name] {
+				out.Print("      %s %s = %s", tui.Dim("·"), tui.Dim(strings.Join(injection.Path[:len(injection.Path)-1], ".")), tui.Dim(injection.Reference()))
+			}
+		}
 	}
 
 	if len(skipped) > 0 {
@@ -224,7 +267,19 @@ func runDeploy(_ context.Context, cmd *cli.Command) error {
 	// warn about values that nothing consumed, this is usually a typo
 	for _, name := range userValues.Components() {
 		if !usedValues[name] {
-			out.Print("  %s Values for %q were ignored: no such component in %s:%s.", tui.Yellow("!"), name, client.Component(), version)
+			warnings = append(warnings, fmt.Sprintf("values for %q were ignored: no such component in %s:%s", name, client.Component(), version))
+		}
+	}
+
+	if cmd.Bool("images") {
+		warnings = append(warnings, unmappedImages(resolved, isEnabled, usedImages)...)
+	}
+
+	if len(warnings) > 0 {
+		out.Print("")
+
+		for _, warning := range warnings {
+			out.Print("  %s %s", tui.Yellow("!"), warning)
 		}
 	}
 
@@ -237,4 +292,86 @@ func runDeploy(_ context.Context, cmd *cli.Command) error {
 	out.Print("")
 
 	return nil
+}
+
+// imageInjections turns the configured image mappings of a release into concrete
+// injections, by looking up each image in the resolved component tree.
+func imageInjections(
+	component ocm.Component,
+	byName map[string]ocm.Component,
+	mappings []components.ImageMapping,
+	used map[string]bool,
+) ([]images.Injection, []string) {
+	injections := []images.Injection{}
+	warnings := []string{}
+
+	for _, mapping := range mappings {
+		source := component
+
+		if mapping.Component != "" {
+			other, exists := byName[mapping.Component]
+			if !exists {
+				warnings = append(warnings, fmt.Sprintf(
+					"%s: component %q does not exist, image not injected", component.Name, mapping.Component))
+
+				continue
+			}
+
+			source = other
+		}
+
+		image, exists := source.Image(mapping.ResourceName())
+		if !exists {
+			warnings = append(warnings, fmt.Sprintf(
+				"%s: image %q not found in %s, Helm chart defaults are used instead",
+				component.Name, mapping.ResourceName(), source.ComponentName))
+
+			continue
+		}
+
+		used[source.Name+"/"+image.Name] = true
+
+		injections = append(injections, images.Injection{
+			Path:        mapping.ValuePath(),
+			Registry:    image.Registry,
+			Repository:  image.Repository,
+			Tag:         image.Tag,
+			Digest:      image.Digest,
+			Combined:    mapping.Combined(),
+			WithDigest:  mapping.WithDigest(),
+			Description: component.Name + ": " + mapping.String(),
+		})
+	}
+
+	return injections, warnings
+}
+
+// unmappedImages reports images that exist in the component descriptor but are not
+// injected into any chart. After a Platform Mesh upgrade this points out new images that
+// the installer does not know about yet (and which would keep their original registry in
+// a mirrored setup).
+func unmappedImages(resolved []ocm.Component, isEnabled func(string) bool, used map[string]bool) []string {
+	unmapped := []string{}
+
+	for _, component := range resolved {
+		if !isEnabled(component.Name) {
+			continue
+		}
+
+		for _, image := range component.Images {
+			if !used[component.Name+"/"+image.Name] {
+				unmapped = append(unmapped, fmt.Sprintf("%s/%s (%s)", component.Name, image.Name, image.Reference()))
+			}
+		}
+	}
+
+	sort.Strings(unmapped)
+
+	if len(unmapped) == 0 {
+		return nil
+	}
+
+	return []string{fmt.Sprintf(
+		"%d image(s) are not mapped into any Helm values and keep their original location: %s",
+		len(unmapped), strings.Join(unmapped, ", "))}
 }

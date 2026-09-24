@@ -25,7 +25,34 @@ const (
 	DefaultComponent = "github.com/platform-mesh/platform-mesh"
 
 	resourceTypeHelmChart = "helmChart"
+	resourceTypeOCIImage  = "ociImage"
 )
+
+// Image is a container image referenced by a component.
+type Image struct {
+	// Name is the name of the OCM resource, e.g. "keycloak-image".
+	Name string
+	// Component is the OCM component the image originates from.
+	Component string
+	// Registry is the host of the image, e.g. "ghcr.io".
+	Registry string
+	// Repository is the path of the image inside the registry, without the host.
+	Repository string
+	// Tag is the image tag.
+	Tag string
+	// Digest is the image digest (can be empty).
+	Digest string
+}
+
+// Reference returns the full image reference, used for logging.
+func (i Image) Reference() string {
+	ref := i.Registry + "/" + i.Repository
+	if i.Tag != "" {
+		ref += ":" + i.Tag
+	}
+
+	return ref
+}
 
 // Chart describes a single Helm chart that is part of a component.
 type Chart struct {
@@ -53,6 +80,20 @@ type Component struct {
 	Version string
 	// Charts are all Helm charts found in this component (usually exactly one).
 	Charts []Chart
+	// Images are all container images found in this component and its sub components.
+	Images []Image
+}
+
+// Image returns the image with the given resource name, or false if the component does
+// not contain it.
+func (c Component) Image(name string) (Image, bool) {
+	for _, image := range c.Images {
+		if image.Name == name {
+			return image, true
+		}
+	}
+
+	return Image{}, false
 }
 
 // Client talks to an OCM repository.
@@ -103,13 +144,27 @@ func NewClient(repository, component string) (*Client, error) {
 }
 
 // NewClientForRegistry opens an OCM repository (without pinning a component), used as
-// mirror target.
+// mirror target. The registry can include a scheme; "http://" is preserved to allow
+// pushing to plain-HTTP registries.
 func NewClientForRegistry(registry string) (ocmapi.Repository, error) {
 	ctx := ocmapi.DefaultContext()
 
-	host, subPath, _ := strings.Cut(strings.TrimPrefix(strings.TrimPrefix(registry, "oci://"), "https://"), "/")
+	scheme := ""
+	for _, prefix := range []string{"http://", "https://", "oci://"} {
+		if strings.HasPrefix(registry, prefix) {
+			if prefix == "http://" {
+				scheme = prefix
+			}
 
-	return ctx.RepositoryForSpec(ocireg.NewRepositorySpec(host, &ocireg.ComponentRepositoryMeta{
+			registry = strings.TrimPrefix(registry, prefix)
+
+			break
+		}
+	}
+
+	host, subPath, _ := strings.Cut(registry, "/")
+
+	return ctx.RepositoryForSpec(ocireg.NewRepositorySpec(scheme+host, &ocireg.ComponentRepositoryMeta{
 		SubPath: subPath,
 	}))
 }
@@ -174,16 +229,17 @@ func (c *Client) Components(version string) ([]Component, error) {
 
 	components := make([]Component, 0, len(cd.References))
 	for _, ref := range cd.References {
-		charts, err := c.charts(ref.Name, ref.ComponentName, ref.Version, 0)
+		content, err := c.walk(ref.Name, ref.ComponentName, ref.Version, true, 0)
 		if err != nil {
-			return nil, fmt.Errorf("cannot resolve charts of component %s: %w", ref.ComponentName, err)
+			return nil, fmt.Errorf("cannot resolve component %s: %w", ref.ComponentName, err)
 		}
 
 		components = append(components, Component{
 			Name:          ref.Name,
 			ComponentName: ref.ComponentName,
 			Version:       ref.Version,
-			Charts:        charts,
+			Charts:        content.charts,
+			Images:        content.images,
 		})
 	}
 
@@ -210,73 +266,118 @@ func (c *Client) descriptor(component, version string) (*compdesc.ComponentDescr
 	return cv.GetDescriptor().Copy(), nil
 }
 
-// charts collects all Helm charts of a component. Components either contain the chart
-// resources directly (like cert-manager or traefik) or they point to a dedicated
-// "chart" component (like account-operator -> helm-charts/account-operator).
-func (c *Client) charts(name, component, version string, depth int) ([]Chart, error) {
+// content is what a single walk through (a part of) the component tree yielded.
+type content struct {
+	charts []Chart
+	images []Image
+}
+
+// walk collects all Helm charts and container images of a component. Components either
+// contain the chart resources directly (like cert-manager or traefik) or they point to a
+// dedicated "chart" component (like account-operator -> helm-charts/account-operator);
+// images are usually found in a dedicated "image" sub component.
+//
+// collectCharts is only true along the path of chart references, so that charts of
+// unrelated sub components are not mistaken for the component's own chart.
+func (c *Client) walk(name, component, version string, collectCharts bool, depth int) (content, error) {
+	result := content{}
+
 	if depth > 2 {
-		return nil, nil
+		return result, nil
 	}
 
 	cd, err := c.descriptor(component, version)
 	if err != nil {
-		return nil, err
+		return result, err
 	}
 
-	var charts []Chart
-
 	for _, res := range cd.Resources {
-		if !isHelmChartType(res.Type) {
+		isChart := isHelmChartType(res.Type)
+		if !isChart && res.Type != resourceTypeOCIImage {
+			continue
+		}
+
+		if isChart && !collectCharts {
 			continue
 		}
 
 		spec, err := c.ctx.AccessSpecForSpec(res.Access)
 		if err != nil {
-			return nil, fmt.Errorf("cannot decode access of resource %q: %w", res.Name, err)
+			return result, fmt.Errorf("cannot decode access of resource %q: %w", res.Name, err)
 		}
 
 		artifact, ok := spec.(*ociartifact.AccessSpec)
 		if !ok {
-			continue // not an OCI artifact, nothing we can turn into an OCIRepository
+			continue // not an OCI artifact, nothing we can point Kubernetes at
 		}
 
 		repository, tag, digest, err := splitImageReference(artifact.ImageReference)
 		if err != nil {
-			return nil, fmt.Errorf("resource %q: %w", res.Name, err)
+			return result, fmt.Errorf("resource %q: %w", res.Name, err)
 		}
 
 		if digest == "" {
 			digest = resourceDigest(res.Digest)
 		}
 
-		charts = append(charts, Chart{
-			Name:          chartName(name, res.Name),
-			Component:     component,
-			Version:       res.Version,
-			RepositoryURL: repository,
-			Tag:           tag,
-			Digest:        digest,
-		})
-	}
+		if isChart {
+			result.charts = append(result.charts, Chart{
+				Name:          chartName(name, res.Name),
+				Component:     component,
+				Version:       res.Version,
+				RepositoryURL: repository,
+				Tag:           tag,
+				Digest:        digest,
+			})
 
-	if len(charts) > 0 {
-		return charts, nil
-	}
-
-	for _, ref := range cd.References {
-		if !isChartReference(ref.Name) {
 			continue
 		}
 
-		sub, err := c.charts(chartName(name, ref.Name), ref.ComponentName, ref.Version, depth+1)
-		if err != nil {
-			return nil, err
-		}
+		registry, path, _ := strings.Cut(repository, "/")
 
-		charts = append(charts, sub...)
+		result.images = append(result.images, Image{
+			Name:       res.Name,
+			Component:  component,
+			Registry:   registry,
+			Repository: path,
+			Tag:        tag,
+			Digest:     digest,
+		})
 	}
 
-	return charts, nil
+	// Charts are only looked for further down the tree if the component itself does not
+	// provide any; images however can live anywhere in the sub tree.
+	descendForCharts := collectCharts && len(result.charts) == 0
+
+	for _, ref := range cd.References {
+		sub, err := c.walk(chartName(name, ref.Name), ref.ComponentName, ref.Version, descendForCharts && isChartReference(ref.Name), depth+1)
+		if err != nil {
+			return result, err
+		}
+
+		result.charts = append(result.charts, sub.charts...)
+
+		for _, image := range sub.images {
+			if _, exists := findImage(result.images, image.Name); !exists {
+				result.images = append(result.images, image)
+			}
+		}
+	}
+
+	return result, nil
+}
+
+// findImage returns the image with the given resource name. Resource names are unique
+// per component, but the same name can occur in multiple sub components (e.g. etcd-druid
+// references multiple versions of etcd-wrapper); in that case the first one wins.
+func findImage(images []Image, name string) (Image, bool) {
+	for _, image := range images {
+		if image.Name == name {
+			return image, true
+		}
+	}
+
+	return Image{}, false
 }
 
 // resourceDigest turns the digest information of a component descriptor resource into an

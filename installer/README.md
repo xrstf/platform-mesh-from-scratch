@@ -68,6 +68,8 @@ Flags:
 | `--namespace` | `platform-mesh-system` | namespace for the generated Flux objects |
 | `--enable` / `--disable` | – | enable/disable individual components (repeatable) |
 | `--digests` | `true` | pin the OCI digest of every chart in addition to its tag (`--digests=false` to opt out) |
+| `--images` | `true` | inject the image locations resolved from OCM into the Helm values |
+| `--show-images` | `false` | print every injected image |
 | `--prereleases` | `false` | consider prerelease versions when looking for the latest version |
 
 The output directory is populated like this:
@@ -119,6 +121,53 @@ Two styles are supported:
 Values for components that do not exist in the chosen PM version are reported as a warning,
 which usually means a typo.
 
+#### Image injection
+
+Charts do not only need to come from the right place, the **images** they deploy do as well.
+The component descriptor knows where every image lives, so the installer writes those
+coordinates into the Helm values of the chart that deploys them:
+
+```yaml
+  values:
+    image:
+      registry: quay.io
+      repository: jetstack/cert-manager-controller
+      tag: v1.20.1
+      digest: sha256:9f9556b4b131554694c67c8229d231b1f7d69b882b5f061a56bafa465f3b22fc
+```
+
+This is what makes `mirror` useful: after mirroring into `registry.example.com/pm`, the very
+same command produces
+
+```yaml
+  values:
+    image:
+      registry: registry.example.com
+      repository: pm/jetstack/cert-manager-controller
+      tag: v1.20.1
+      digest: sha256:9f9556b4b131554694c67c8229d231b1f7d69b882b5f061a56bafa465f3b22fc
+```
+
+without you touching a single file. The injected values always win over what is in your
+values file (a hand-written registry or a stale digest would break an airgapped install),
+but everything else you wrote – including comments – is left alone.
+
+Which image goes where is described in `internal/components/images.yaml`, mirroring the
+`imageResources` configuration of the Platform Mesh Operator. Per image you can configure:
+
+| Key | Default | Description |
+| --- | ------- | ----------- |
+| `component` | the release's own component | OCM component to take the image from (e.g. `infra` sources the kcp image from the `kcp` component) |
+| `resource` | `image` | name of the image resource inside the component |
+| `path` | `image.tag` | dot-separated path to the *tag* in the Helm values; `registry`, `repository` and `digest` are written next to it |
+| `style` | `split` | `combined` folds the registry into the repository (`ghcr.io/foo/bar`) for charts that only know a single, host-qualified `repository` |
+| `digest` | `true` | set to `false` for charts whose image schema has no digest field (e.g. traefik) |
+
+Images that exist in the component descriptor but are not mapped anywhere are listed as a
+warning at the end of a `deploy` run – after a Platform Mesh upgrade this immediately shows
+which new images still need a mapping. Use `--show-images` to see every injection and
+`--images=false` to turn the mechanism off entirely.
+
 ### `installer mirror`
 
 > [!NOTE]
@@ -137,7 +186,9 @@ and container images) into your registry and then tells you how to point `deploy
 installer deploy --repository registry.example.com/platform-mesh --version 0.5.2
 ```
 
-Use `--dry-run` to only list what would be transferred.
+The generated manifests then reference your registry for **both** charts and images (see
+[Image injection](#image-injection)). Use `--dry-run` to only list what would be
+transferred, and prefix the target with `http://` for plain-HTTP registries.
 
 ## Component metadata
 
@@ -151,9 +202,11 @@ installer are deployed into the release namespace without dependencies.
 
 ```
 internal/cmd/          CLI commands (start, deploy, mirror)
-internal/ocm/          OCM SDK wrapper: version resolution and chart discovery
-internal/components/   built-in component metadata (namespaces, dependencies, defaults)
+internal/ocm/          OCM SDK wrapper: version resolution, chart and image discovery
+internal/components/   built-in metadata (namespaces, dependencies, image mappings)
 internal/values/       loading of user Helm values (file or directory)
+internal/images/       injection of resolved image locations into Helm values
+internal/yamlutil/     comment-preserving YAML node manipulation
 internal/generate/     manifest generation (Flux HelmRelease + OCIRepository)
 internal/starter/      templates and rendering for `start`
 internal/tui/          the modest interactive bits

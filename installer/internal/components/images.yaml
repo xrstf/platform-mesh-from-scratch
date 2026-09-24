@@ -1,0 +1,152 @@
+# Mapping of OCM image resources to Helm values paths.
+#
+# When a Platform Mesh release is mirrored into another OCI registry, every image
+# changes its location. The component descriptor knows the new location, so the installer
+# injects the resolved coordinates of each image into the Helm values of the chart that
+# needs it. This is the same mechanism the Platform Mesh Operator implements with its
+# `imageResources` profile entries and `delivery.ocm.software/Resource` objects.
+#
+# Each entry describes one image:
+#
+#   component:     OCM component (by its reference name in the root component) to take the
+#                  image from; defaults to the component of the release itself
+#   resource:      name of the image resource in the component; defaults to "image"
+#   path:          dot-separated path in the Helm values pointing at the *tag*;
+#                  defaults to "image.tag"
+#   style:         "split"    -> registry, repository and tag are written separately (default)
+#                  "combined" -> the repository is host-qualified ("<registry>/<repository>"),
+#                                which is what charts with a single "repository" value expect
+#   digest:        whether to also write the image digest next to the tag; defaults to true
+#                  for the "split" style, must be false for charts that do not allow it
+
+images:
+  account-operator:
+    - resource: image
+
+  cert-manager:
+    - resource: controller-image
+      path: image.tag
+    - resource: webhook-image
+      path: webhook.image.tag
+    - resource: cainjector-image
+      path: cainjector.image.tag
+
+  cnpg-operator:
+    # the chart only knows a single, host-qualified image.repository
+    - resource: image
+      style: combined
+
+  etcd-druid:
+    # the chart exposes only image.repository + image.tag, no registry/digest
+    - resource: etcd-druid
+      style: combined
+
+  example-httpbin-operator:
+    - resource: image
+
+  extension-manager-operator:
+    - resource: image
+
+  iam-service:
+    - resource: image
+
+  iam-ui:
+    - resource: image
+
+  infra:
+    - resource: keycloak-image
+      path: keycloak.operator.image.tag
+    - resource: busybox-image
+      path: keycloak.operator.waitForDb.image.tag
+    - resource: dex-image
+      path: dex.image.tag
+    - resource: postgres-image
+      path: cnpg.cluster.image.tag
+    # kcp itself is a component of its own, the infra chart deploys it
+    - component: kcp
+      resource: image
+      path: kcp.image.tag
+      style: combined
+    - resource: etcd-wrapper-image
+      path: kcp.etcd.image.tag
+      style: combined
+    - resource: etcdbrctl-image
+      path: kcp.etcd.backup.image.tag
+      style: combined
+
+  init-agent:
+    - resource: image
+      style: combined
+
+  kcp-operator:
+    - resource: image
+      style: combined
+
+  keycloak-operator:
+    - resource: manager-image
+      path: image.tag
+    - resource: keycloak-image
+      path: keycloakImage.tag
+
+  kro-composition-operator:
+    - resource: image
+
+  kubernetes-graphql-gateway:
+    - resource: image
+
+  marketplace-ui:
+    - resource: image
+
+  observability:
+    - resource: otel-collector-image
+      path: otelCollector.image.tag
+    - resource: kubectl-image
+      path: serviceMonitors.kcp.certExtractor.image.tag
+    - resource: prometheus-server-image
+      path: prometheus.server.image.tag
+      style: combined
+    - resource: prometheus-config-reloader-image
+      path: prometheus.configmapReload.prometheus.image.tag
+      style: combined
+
+  openfga:
+    # openfga's values.schema.json rejects registry/digest outright
+    - resource: image
+      style: combined
+    - resource: postgresql-image
+      path: postgresql.image.tag
+
+  opentelemetry-operator:
+    # the chart exposes all three images as a single host-qualified repository + tag
+    - resource: manager-image
+      path: manager.image.tag
+      style: combined
+    - resource: collector-image
+      path: manager.collectorImage.tag
+      style: combined
+    - resource: target-allocator-image
+      path: manager.targetAllocatorImage.tag
+      style: combined
+
+  platform-mesh-operator:
+    - resource: image
+
+  portal:
+    - resource: image
+
+  rebac-authz-webhook:
+    - resource: image
+
+  security-operator:
+    - resource: image
+
+  terminal-controller-manager:
+    - resource: image
+
+  traefik:
+    # traefik's image schema is strict (additionalProperties: false) and has no digest field
+    - resource: image
+      digest: false
+
+  virtual-workspaces:
+    - resource: image
